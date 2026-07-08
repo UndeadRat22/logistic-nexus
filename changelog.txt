@@ -1,0 +1,43 @@
+Version: 0.1.7
+Date: 2026-07-04
+  Changes:
+    - Added construction support for upgrade planner requests.
+    - Improved construction demand scanning and diagnostics.
+    - Improved item-return safety to reduce ground spills during rebuilds.
+    - Optimized construction scan queue processing and hardened recipe amount handling.
+
+Version: 0.1.6
+Date: 2026-06-30
+  Changes:
+    - Fixed internal replanning so AG Mall uses available logistic-network components before crafting intermediates.
+    - Fixed construction scanning crash when tile ghosts are present.
+
+Version: 0.1.5
+Date: 2026-06-22
+  Changes:
+    - Added exact-quality crafting for logistic and construction requests.
+
+Version: 0.1.4
+Date: 2026-06-18
+  Changes:
+    - Rechecks available intermediate components before internal crafting begins.
+
+Version: 0.1.3
+Date: 2026-06-18
+  Changes:
+    - Optimized construction-request scanning to prevent frame-time spikes.
+
+Version: 0.1.2
+Date: 2026-06-14
+  Changes:
+    - Improved fluid recipe handling to use barrels efficiently.
+
+Version: 0.1.1
+Date: 2026-06-11
+  Changes:
+    - Fixed errors and updated AG Mall graphics.
+
+Version: 0.1.0
+Date: 2026-06-08
+  Features:
+    - Initial release.
