@@ -59,9 +59,6 @@ local function init_storage()
   if type(storage.brains) ~= "table" then
     storage.brains = {}
   end
-  if type(storage.barrelled_recipe_effects_reset) ~= "table" then
-    storage.barrelled_recipe_effects_reset = {}
-  end
   if type(storage.construction_scans) ~= "table" then
     storage.construction_scans = {}
   end
@@ -3885,18 +3882,17 @@ end
 
 function sync_barrelled_recipes()
   storage.last_barrelled_recipe_sync = game.tick
-  storage.barrelled_recipe_effects_reset = storage.barrelled_recipe_effects_reset or {}
 
   for _, force in pairs(game.forces) do
-    if not storage.barrelled_recipe_effects_reset[force.name] then
-      pcall(function()
-        force.reset_technology_effects()
-      end)
-      pcall(function()
-        force.reset_recipes()
-      end)
-      storage.barrelled_recipe_effects_reset[force.name] = true
-    end
+    -- Reload recipe prototypes from data first, then reapply researched tech effects.
+    -- Doing this on every research event guarantees that newly-unlocked recipes
+    -- are actually available to the mall instead of getting stuck in a disabled state.
+    pcall(function()
+      force.reset_recipes()
+    end)
+    pcall(function()
+      force.reset_technology_effects()
+    end)
 
     for recipe_name, recipe in pairs(force.recipes) do
       if type(recipe_name) == "string"
