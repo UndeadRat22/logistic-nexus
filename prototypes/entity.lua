@@ -58,6 +58,8 @@ workshop.collision_box = {{-1.99, -1.99}, {1.99, 1.99}}
 workshop.selection_box = {{-2, -1}, {1, 2}}
 workshop.flags = workshop.flags or {}
 table.insert(workshop.flags, "hide-alt-info")
+-- Select over the internal companion chests so the workshop GUI opens when clicked.
+workshop.selection_priority = 51
 
 local workshop_mk2 = table.deepcopy(workshop)
 workshop_mk2.name = "logistic-nexus-workshop-mk2"
@@ -74,6 +76,7 @@ workshop_mk2.allow_copy_paste = true
 workshop_mk2.crafting_speed = 2
 workshop_mk2.module_slots = 6
 workshop_mk2.energy_usage = "1500kW"
+workshop_mk2.selection_priority = 51
 
 workshop.next_upgrade = "logistic-nexus-workshop-mk2"
 
