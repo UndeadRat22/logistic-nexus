@@ -1,0 +1,38 @@
+local helpers = require("spec.helpers")
+
+helpers.install_globals()
+local DataStageUtil = require("prototypes.data_stage_util")
+
+describe("data_stage_util", function()
+  describe("parse_excluded_categories", function()
+    it("returns empty table for nil", function()
+      local result = DataStageUtil.parse_excluded_categories(nil)
+      assert.are.same({}, result)
+    end)
+
+    it("returns empty table for empty string", function()
+      local result = DataStageUtil.parse_excluded_categories("")
+      assert.are.same({}, result)
+    end)
+
+    it("parses a single category", function()
+      local result = DataStageUtil.parse_excluded_categories("smelting")
+      assert.is_true(result["smelting"])
+    end)
+
+    it("trims whitespace around categories", function()
+      local result = DataStageUtil.parse_excluded_categories("  smelting , centrifuging ,  chemistry ")
+      assert.is_true(result["smelting"])
+      assert.is_true(result["centrifuging"])
+      assert.is_true(result["chemistry"])
+      assert.is_nil(result["  smelting "])
+    end)
+
+    it("ignores blank entries from consecutive commas", function()
+      local result = DataStageUtil.parse_excluded_categories("smelting,,centrifuging")
+      assert.is_true(result["smelting"])
+      assert.is_true(result["centrifuging"])
+      assert.is_nil(result[""])
+    end)
+  end)
+end)

@@ -1,6 +1,8 @@
 -- AG Mall
 -- Generate item-only recipe variants for recipes that normally need fluids.
 
+local DataStageUtil = require("prototypes.data_stage_util")
+
 local PREFIX = "ag-mall-barrelled-"
 local BARREL_SIZE = 50
 local EMPTY_BARREL_ITEM = "barrel"
@@ -285,15 +287,20 @@ end
 -- supported without requiring mod authors to patch the workshop prototype.
 local workshop = data.raw["assembling-machine"]["ag-mall-workshop"]
 if workshop then
+  local setting_value = settings
+      and settings.startup
+      and settings.startup["ag-mall-excluded-categories"]
+      and settings.startup["ag-mall-excluded-categories"].value
+  local excluded_categories = DataStageUtil.parse_excluded_categories(setting_value)
   local categories = {}
   for _, category in pairs(workshop.crafting_categories or {}) do
-    if type(category) == "string" then
+    if type(category) == "string" and not excluded_categories[category] then
       categories[category] = true
     end
   end
   for _, recipe in pairs(data.raw.recipe) do
     local category = recipe.category or "crafting"
-    if type(category) == "string" then
+    if type(category) == "string" and not excluded_categories[category] then
       categories[category] = true
     end
   end
