@@ -381,12 +381,9 @@ function M.debug_mall_item(player, item_name)
         end
         player.print("AG Mall debug: workshop crafting_categories: [" .. cat_str .. "]")
         if source_recipe.valid then
-          local src_cats = source_recipe.categories or {}
-          local src_cat_str = ""
-          for _, c in pairs(src_cats) do
-            src_cat_str = src_cat_str .. tostring(c) .. " "
-          end
-          player.print("AG Mall debug: recipe categories: [" .. src_cat_str .. "]")
+          local src_cat = source_recipe.category
+          local src_cat_str = src_cat and tostring(src_cat) or ""
+          player.print("AG Mall debug: recipe category: [" .. src_cat_str .. "]")
           local has_cat = false
           if cats then
             for k, v in pairs(cats) do
