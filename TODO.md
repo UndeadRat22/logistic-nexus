@@ -12,10 +12,6 @@ Consider allowing modules to boost crafting speed or productivity.
 The workshop has `crafting_speed = 1` with no upgrade path. Consider tiered
 workshops or research-based speed upgrades.
 
-### 9. No production statistics or status GUI
-Only entity status icons and map/world sprites exist. Consider a GUI panel
-showing current jobs, blocked items, and throughput.
-
 ### 10. No alerts when an item cannot be crafted
 Blocked items are only visible through the entity status icon. Consider
 flying-text alerts or console messages when a requested item is uncraftable.
@@ -34,6 +30,10 @@ MK2 workshop variants.
 Workshops now maintain a `job_queue` of up to `WORKSHOP_QUEUE_SIZE` final-product jobs.
 The brain assigns jobs to any workshop with queue space, and when a job finishes draining
 the next queued job starts immediately instead of waiting for the next assessment tick.
+
+### 9. No production statistics or status GUI
+Added `/logistic-nexus-gui` which opens a status panel showing workshop summary,
+target shortages, active counts, blocked reasons, and per-workshop state/progress.
 
 ### 18. Better handling of script-enabled recipes
 Fixed by clearing negative recipe-cache entries during each assessment, so

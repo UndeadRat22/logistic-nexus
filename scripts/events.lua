@@ -8,6 +8,7 @@ local Construction = require("scripts.construction")
 local Companions = require("scripts.companions")
 local Brain = require("scripts.brain")
 local Registration = require("scripts.registration")
+local Gui = require("scripts.gui")
 
 local M = {}
 
@@ -110,6 +111,34 @@ function M.on_gui_opened(event)
   end
 end
 
+function M.on_gui_click(event)
+  local element = event.element
+  if not (element and element.valid) then
+    return
+  end
+
+  if element.name == Gui.CLOSE_BUTTON_NAME then
+    local player = game.get_player(event.player_index)
+    if player then
+      Gui.close_status_gui(player)
+    end
+  end
+end
+
+function M.on_gui_closed(event)
+  local element = event.element
+  if not (element and element.valid) then
+    return
+  end
+
+  if element.name == Gui.FRAME_NAME then
+    local player = game.get_player(event.player_index)
+    if player then
+      Gui.close_status_gui(player)
+    end
+  end
+end
+
 function M.on_entity_logistic_slot_changed(event)
   local entity = event.entity
   if not (entity and entity.valid) or entity.name == C.REQUESTER_NAME then
@@ -175,6 +204,11 @@ function M.register_events()
   end
 
   script.on_event(defines.events.on_gui_opened, M.on_gui_opened)
+  script.on_event(defines.events.on_gui_click, M.on_gui_click)
+
+  if defines.events.on_gui_closed then
+    script.on_event(defines.events.on_gui_closed, M.on_gui_closed)
+  end
 
   script.on_nth_tick(C.ASSESS_INTERVAL, M.on_nth_tick)
 
@@ -225,6 +259,20 @@ function M.register_events()
 
   commands.add_command("logistic-nexus-status", "Print the latest Logistic Nexus network allocation analysis", function(command)
     Registration.debug_status(command)
+  end)
+
+  commands.add_command("logistic-nexus-gui", "Open the Logistic Nexus status GUI", function(command)
+    local player = command.player_index and game.get_player(command.player_index)
+    if not player then
+      return
+    end
+
+    local brain = Gui.get_brain_for_player(player)
+    if brain then
+      Gui.open_status_gui(player, brain)
+    else
+      player.print({"logistic-nexus.status-gui-no-network"})
+    end
   end)
 end
 
