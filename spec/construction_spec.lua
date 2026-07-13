@@ -322,4 +322,74 @@ describe("construction", function()
       assert.is_false(added)
     end)
   end)
+
+  describe("position_in_network_construction_area", function()
+    local function make_cell(owner_pos, radius)
+      return {
+        valid = true,
+        transmitting = true,
+        construction_radius = radius or 10,
+        owner = {
+          valid = true,
+          position = owner_pos,
+          surface = {index = 1}
+        }
+      }
+    end
+
+    local function make_network(cells)
+      return {
+        valid = true,
+        network_id = 1,
+        force = {name = "player"},
+        cells = cells or {}
+      }
+    end
+
+    it("returns true when position is within a cell's construction radius", function()
+      local network = make_network({make_cell({x = 0, y = 0}, 20)})
+      assert.is_true(Construction.position_in_network_construction_area(network, {x = 5, y = 5}))
+    end)
+
+    it("returns false when position is outside all cells", function()
+      local network = make_network({make_cell({x = 0, y = 0}, 10)})
+      assert.is_false(Construction.position_in_network_construction_area(network, {x = 50, y = 50}))
+    end)
+
+    it("returns false for nil network", function()
+      assert.is_false(Construction.position_in_network_construction_area(nil, {x = 0, y = 0}))
+    end)
+
+    it("returns false for nil position", function()
+      local network = make_network({make_cell({x = 0, y = 0}, 20)})
+      assert.is_false(Construction.position_in_network_construction_area(network, nil))
+    end)
+
+    it("checks all cells and returns true if any covers the position", function()
+      local network = make_network({
+        make_cell({x = 0, y = 0}, 5),
+        make_cell({x = 100, y = 100}, 20)
+      })
+      assert.is_true(Construction.position_in_network_construction_area(network, {x = 95, y = 105}))
+    end)
+
+    it("skips non-transmitting cells", function()
+      local cell = make_cell({x = 0, y = 0}, 20)
+      cell.transmitting = false
+      local network = make_network({cell})
+      assert.is_false(Construction.position_in_network_construction_area(network, {x = 5, y = 5}))
+    end)
+
+    it("skips invalid cells", function()
+      local cell = make_cell({x = 0, y = 0}, 20)
+      cell.valid = false
+      local network = make_network({cell})
+      assert.is_false(Construction.position_in_network_construction_area(network, {x = 5, y = 5}))
+    end)
+
+    it("handles edge case: exactly at radius boundary", function()
+      local network = make_network({make_cell({x = 0, y = 0}, 10)})
+      assert.is_true(Construction.position_in_network_construction_area(network, {x = 10, y = 0}))
+    end)
+  end)
 end)

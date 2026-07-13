@@ -449,6 +449,31 @@ end
 -- CONSTRUCTION SCANNING
 ------------------------------------------------------------
 
+function M.position_in_network_construction_area(network, position)
+  if not (network and position) then
+    return false
+  end
+
+  local px, py = position.x, position.y
+
+  for _, cell in pairs(network.cells or {}) do
+    if cell and cell.valid and cell.transmitting then
+      local owner = cell.owner
+      if owner and owner.valid then
+        local radius = cell.construction_radius or 0
+        local ox, oy = owner.position.x, owner.position.y
+        local dx = px - ox
+        local dy = py - oy
+        if dx * dx + dy * dy <= radius * radius then
+          return true
+        end
+      end
+    end
+  end
+
+  return false
+end
+
 function M.construction_scan_blocks(network)
   local surface
   local blocks = {}
@@ -527,23 +552,7 @@ function M.process_construction_scan_block(cache, network)
     if construction_entity.valid then
       local entity_key = M.ghost_key(construction_entity)
       if not scan.seen[entity_key] then
-        local belongs_to_network = false
-
-        for _, candidate_network in pairs(
-          surface.find_logistic_networks_by_construction_area(
-            construction_entity.position,
-            network.force
-          )
-        ) do
-          if candidate_network
-              and candidate_network.valid
-              and candidate_network.network_id == network.network_id then
-            belongs_to_network = true
-            break
-          end
-        end
-
-        if belongs_to_network then
+        if M.position_in_network_construction_area(network, construction_entity.position) then
           scan.seen[entity_key] = true
           local added = construction_entity.type == "item-request-proxy"
               and M.add_item_request_proxy_requests(
@@ -573,28 +582,11 @@ function M.process_construction_scan_block(cache, network)
       local target = M.entity_upgrade_target(upgrade_entity)
       if target then
         local entity_key = "upgrade:" .. M.ghost_key(upgrade_entity)
-        if not scan.seen[entity_key] then
-          local belongs_to_network = false
-
-          for _, candidate_network in pairs(
-            surface.find_logistic_networks_by_construction_area(
-              upgrade_entity.position,
-              network.force
-            )
-          ) do
-            if candidate_network
-                and candidate_network.valid
-                and candidate_network.network_id == network.network_id then
-              belongs_to_network = true
-              break
-            end
-          end
-
-          if belongs_to_network then
-            scan.seen[entity_key] = true
-            if M.add_upgrade_request(scan.ghost_counts, network, upgrade_entity) then
-              scan.request_count = scan.request_count + 1
-            end
+        if not scan.seen[entity_key]
+            and M.position_in_network_construction_area(network, upgrade_entity.position) then
+          scan.seen[entity_key] = true
+          if M.add_upgrade_request(scan.ghost_counts, network, upgrade_entity) then
+            scan.request_count = scan.request_count + 1
           end
         end
       end
