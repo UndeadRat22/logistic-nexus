@@ -174,6 +174,115 @@ describe("workshop job queueing", function()
     end)
   end)
 
+  describe("requester_has_exact_ingredients", function()
+    local function make_requester(contents)
+      local call_count = 0
+      local inventory = {
+        valid = true,
+        is_empty = function() return #contents == 0 end,
+        get_contents = function()
+          local result = {}
+          for _, item in ipairs(contents) do
+            table.insert(result, {name = item.name, count = item.count, quality = item.quality})
+          end
+          return result
+        end,
+        get_item_count = function(item)
+          call_count = call_count + 1
+          for _, c in ipairs(contents) do
+            if c.name == item.name and (c.quality or "normal") == (item.quality or "normal") then
+              return c.count
+            end
+          end
+          return 0
+        end
+      }
+      return {
+        valid = true,
+        get_inventory = function() return inventory end,
+        _get_item_count_calls = function() return call_count end
+      }
+    end
+
+    it("returns true when chest has exactly the needed ingredients", function()
+      local requester = make_requester({
+        {name = "iron-ore", count = 5, quality = "normal"}
+      })
+      local ingredients = {
+        {name = "iron-ore", amount = 5, quality = "normal"}
+      }
+      assert.is_true(Workshop.requester_has_exact_ingredients(requester, ingredients))
+    end)
+
+    it("returns false when chest has too few", function()
+      local requester = make_requester({
+        {name = "iron-ore", count = 3, quality = "normal"}
+      })
+      local ingredients = {
+        {name = "iron-ore", amount = 5, quality = "normal"}
+      }
+      assert.is_false(Workshop.requester_has_exact_ingredients(requester, ingredients))
+    end)
+
+    it("returns false when chest has too many", function()
+      local requester = make_requester({
+        {name = "iron-ore", count = 10, quality = "normal"}
+      })
+      local ingredients = {
+        {name = "iron-ore", amount = 5, quality = "normal"}
+      }
+      assert.is_false(Workshop.requester_has_exact_ingredients(requester, ingredients))
+    end)
+
+    it("returns false when chest has extra items not in ingredients", function()
+      local requester = make_requester({
+        {name = "iron-ore", count = 5, quality = "normal"},
+        {name = "copper-ore", count = 3, quality = "normal"}
+      })
+      local ingredients = {
+        {name = "iron-ore", amount = 5, quality = "normal"}
+      }
+      assert.is_false(Workshop.requester_has_exact_ingredients(requester, ingredients))
+    end)
+
+    it("handles multiple ingredients with quality", function()
+      local requester = make_requester({
+        {name = "iron-plate", count = 2, quality = "normal"},
+        {name = "copper-plate", count = 3, quality = "legendary"}
+      })
+      local ingredients = {
+        {name = "iron-plate", amount = 2, quality = "normal"},
+        {name = "copper-plate", amount = 3, quality = "legendary"}
+      }
+      assert.is_true(Workshop.requester_has_exact_ingredients(requester, ingredients))
+    end)
+
+    it("returns false for invalid requester", function()
+      assert.is_false(Workshop.requester_has_exact_ingredients(nil, {{name = "iron-ore", amount = 1}}))
+      assert.is_false(Workshop.requester_has_exact_ingredients({valid = false}, {{name = "iron-ore", amount = 1}}))
+    end)
+
+    it("returns true for empty ingredients with empty chest", function()
+      local requester = make_requester({})
+      assert.is_true(Workshop.requester_has_exact_ingredients(requester, {}))
+    end)
+
+    it("does not call get_item_count per ingredient", function()
+      local requester = make_requester({
+        {name = "iron-ore", count = 5, quality = "normal"},
+        {name = "copper-ore", count = 3, quality = "normal"},
+        {name = "steel-plate", count = 2, quality = "normal"}
+      })
+      local ingredients = {
+        {name = "iron-ore", amount = 5, quality = "normal"},
+        {name = "copper-ore", amount = 3, quality = "normal"},
+        {name = "steel-plate", amount = 2, quality = "normal"}
+      }
+      assert.is_true(Workshop.requester_has_exact_ingredients(requester, ingredients))
+      assert.are.equal(0, requester._get_item_count_calls())
+    end)
+  end)
+
   describe("tick_workshop_worker queue drain", function()
     it("starts the next queued job when draining completes", function()
       local entity = make_entity()

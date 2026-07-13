@@ -301,25 +301,29 @@ function M.requester_has_exact_ingredients(requester, ingredients)
     needed[key] = (needed[key] or 0) + amount
   end
 
-  for key, amount in pairs(needed) do
-    local name, quality = Util.split_item_key(key)
-    if M.requester_item_count(requester, name, quality) ~= amount then
-      return false
-    end
-  end
-
   local inventory = requester.get_inventory(defines.inventory.chest)
   if not (inventory and inventory.valid) then
     return false
   end
 
+  local actual = {}
   for _, item in pairs(inventory.get_contents() or {}) do
     if item.name and (item.count or 0) > 0 then
       local quality = Util.quality_name(item.quality)
       local key = Util.item_key(item.name, quality)
-      if not needed[key] or item.count > needed[key] then
-        return false
-      end
+      actual[key] = (actual[key] or 0) + (item.count or 0)
+    end
+  end
+
+  for key, amount in pairs(needed) do
+    if (actual[key] or 0) ~= amount then
+      return false
+    end
+  end
+
+  for key, count in pairs(actual) do
+    if count > 0 and not needed[key] then
+      return false
     end
   end
 
