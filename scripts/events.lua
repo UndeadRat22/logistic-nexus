@@ -64,6 +64,8 @@ function M.on_mined_entity(event)
     Registration.unregister_companion(entity)
   end
 
+  Construction.unregister_upgrade_marked(entity)  end
+
   if entity.valid and entity.surface and entity.force then
     Storage.mark_network_schedule_dirty(
       entity.surface.find_logistic_network_by_position(entity.position, entity.force)
@@ -91,10 +93,12 @@ local function mark_entity_construction_network_dirty(entity)
 end
 
 function M.on_marked_for_upgrade(event)
+  Construction.register_upgrade_marked(event.entity)
   mark_entity_construction_network_dirty(event.entity)
 end
 
 function M.on_cancelled_upgrade(event)
+  Construction.unregister_upgrade_marked(event.entity)
   mark_entity_construction_network_dirty(event.entity)
 end
 

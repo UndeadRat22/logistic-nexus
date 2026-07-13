@@ -392,4 +392,45 @@ describe("construction", function()
       assert.is_true(Construction.position_in_network_construction_area(network, {x = 10, y = 0}))
     end)
   end)
+
+  describe("upgrade_marked tracking", function()
+    before_each(function()
+      storage.upgrade_marked = {}
+    end)
+
+    it("register_upgrade_marked adds entity to the set", function()
+      local entity = {valid = true, unit_number = 42, surface = {index = 1}}
+      Construction.register_upgrade_marked(entity)
+      assert.is_not_nil(storage.upgrade_marked[42])
+    end)
+
+    it("unregister_upgrade_marked removes entity from the set", function()
+      local entity = {valid = true, unit_number = 42, surface = {index = 1}}
+      Construction.register_upgrade_marked(entity)
+      Construction.unregister_upgrade_marked(entity)
+      assert.is_nil(storage.upgrade_marked[42])
+    end)
+
+    it("unregister_upgrade_marked handles nil entity", function()
+      assert.has_no.errors(function()
+        Construction.unregister_upgrade_marked(nil)
+      end)
+    end)
+
+    it("unregister_upgrade_marked handles entity without unit_number", function()
+      assert.has_no.errors(function()
+        Construction.unregister_upgrade_marked({valid = true})
+      end)
+    end)
+
+    it("cleanup_upgrade_marked removes invalid entries", function()
+      storage.upgrade_marked = {
+        [1] = {valid = true, unit_number = 1, surface = {index = 1}, position = {x = 0, y = 0}},
+        [2] = {valid = false, unit_number = 2, surface = {index = 1}, position = {x = 0, y = 0}}
+      }
+      Construction.cleanup_upgrade_marked()
+      assert.is_not_nil(storage.upgrade_marked[1])
+      assert.is_nil(storage.upgrade_marked[2])
+    end)
+  end)
 end)

@@ -9,6 +9,49 @@ local Network = require("scripts.network")
 local M = {}
 
 ------------------------------------------------------------
+-- UPGRADE MARKED TRACKING
+--
+-- Entities marked for upgrade are tracked via events instead of
+-- scanning all entities in an area for to_be_upgraded().
+------------------------------------------------------------
+
+function M.register_upgrade_marked(entity)
+  if not (entity and entity.valid and entity.unit_number) then
+    return
+  end
+
+  if type(storage.upgrade_marked) ~= "table" then
+    storage.upgrade_marked = {}
+  end
+
+  storage.upgrade_marked[entity.unit_number] = entity
+end
+
+function M.unregister_upgrade_marked(entity)
+  if not (entity and entity.unit_number) then
+    return
+  end
+
+  if type(storage.upgrade_marked) ~= "table" then
+    return
+  end
+
+  storage.upgrade_marked[entity.unit_number] = nil
+end
+
+function M.cleanup_upgrade_marked()
+  if type(storage.upgrade_marked) ~= "table" then
+    return
+  end
+
+  for unit_number, entity in pairs(storage.upgrade_marked) do
+    if not (entity and entity.valid) then
+      storage.upgrade_marked[unit_number] = nil
+    end
+  end
+end
+
+------------------------------------------------------------
 -- REQUEST AGGREGATION
 ------------------------------------------------------------
 
@@ -574,21 +617,33 @@ function M.process_construction_scan_block(cache, network)
     end
   end
 
-  for _, upgrade_entity in pairs(surface.find_entities_filtered({
-    area = area,
-    force = network.force
-  })) do
-    if upgrade_entity.valid then
-      local target = M.entity_upgrade_target(upgrade_entity)
-      if target then
-        local entity_key = "upgrade:" .. M.ghost_key(upgrade_entity)
-        if not scan.seen[entity_key]
-            and M.position_in_network_construction_area(network, upgrade_entity.position) then
-          scan.seen[entity_key] = true
-          if M.add_upgrade_request(scan.ghost_counts, network, upgrade_entity) then
-            scan.request_count = scan.request_count + 1
+  -- Scan upgrade-marked entities from the tracked set instead of
+  -- querying all entities in the area (which is very expensive).
+  if type(storage.upgrade_marked) == "table" then
+    local area_min_x, area_min_y = area[1][1], area[1][2]
+    local area_max_x, area_max_y = area[2][1], area[2][2]
+
+    for unit_number, upgrade_entity in pairs(storage.upgrade_marked) do
+      if upgrade_entity
+          and upgrade_entity.valid
+          and upgrade_entity.surface
+          and upgrade_entity.surface.index == scan.surface_index
+          and upgrade_entity.force == network.force then
+        local pos = upgrade_entity.position
+        if pos
+            and pos.x >= area_min_x and pos.x < area_max_x
+            and pos.y >= area_min_y and pos.y < area_max_y then
+          local entity_key = "upgrade:" .. M.ghost_key(upgrade_entity)
+          if not scan.seen[entity_key]
+              and M.position_in_network_construction_area(network, pos) then
+            scan.seen[entity_key] = true
+            if M.add_upgrade_request(scan.ghost_counts, network, upgrade_entity) then
+              scan.request_count = scan.request_count + 1
+            end
           end
         end
+      else
+        storage.upgrade_marked[unit_number] = nil
       end
     end
   end
