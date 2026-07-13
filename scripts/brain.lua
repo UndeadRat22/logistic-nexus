@@ -480,7 +480,10 @@ function M.process_due_brains()
           and brain.network.valid
           and brain.workshops
           and #brain.workshops > 0 then
-        M.process_brain(brain)
+        local ok, err = pcall(M.process_brain, brain)
+        if not ok then
+          log("Logistic Nexus process_brain error for " .. tostring(key) .. ": " .. tostring(err))
+        end
       else
         storage.brains[key] = nil
       end
