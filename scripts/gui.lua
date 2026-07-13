@@ -159,7 +159,7 @@ local function add_target_table(frame, data)
   local scroll = frame.add({
     type = "scroll-pane",
     name = "targets_scroll",
-    style = "logistic_scroll_pane"
+    style = "scroll_pane"
   })
   scroll.style.maximal_height = 300
 
@@ -211,7 +211,7 @@ local function add_worker_table(frame, data)
   local scroll = frame.add({
     type = "scroll-pane",
     name = "workers_scroll",
-    style = "logistic_scroll_pane"
+    style = "scroll_pane"
   })
   scroll.style.maximal_height = 200
 
