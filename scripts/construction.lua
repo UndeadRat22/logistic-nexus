@@ -116,8 +116,8 @@ function M.reserve_construction_output(workshop_data, count)
     reservations[key] = reservation
   end
 
-  local remaining = (workshop_data.current_construction_target or 0)
-      - (workshop_data.current_construction_reserved or 0)
+  local already_reserved = reservation.count or 0
+  local remaining = (workshop_data.current_construction_target or 0) - already_reserved
   local reserved = math.min(count, math.max(0, remaining))
 
   if reserved <= 0 then
