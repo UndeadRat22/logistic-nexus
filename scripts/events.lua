@@ -168,12 +168,9 @@ end
 -- TICK EVENTS
 ------------------------------------------------------------
 
-function M.on_nth_tick()
-  Brain.assess_all_workshops()
-end
-
 function M.on_tick()
   Construction.process_construction_scan_queue()
+  Brain.process_due_brains()
 end
 
 ------------------------------------------------------------
@@ -212,8 +209,6 @@ function M.register_events()
   if defines.events.on_gui_closed then
     script.on_event(defines.events.on_gui_closed, M.on_gui_closed)
   end
-
-  script.on_nth_tick(C.ASSESS_INTERVAL, M.on_nth_tick)
 
   script.on_event(defines.events.on_tick, M.on_tick)
 

@@ -1,6 +1,7 @@
 local helpers = require("spec.helpers")
 
 helpers.install_globals()
+local Storage = require("scripts.storage")
 local Brain = require("scripts.brain")
 
 describe("brain", function()
@@ -192,6 +193,140 @@ describe("brain", function()
       local brain = {workshops = {}}
       local workers = Brain.collect_worker_metrics(brain)
       assert.are.same({}, workers)
+    end)
+  end)
+
+  describe("brain_assess_tick_offset", function()
+    it("returns a stable offset within the assess interval", function()
+      local offset = Brain.brain_assess_tick_offset("player|1")
+      assert.is_true(offset >= 0 and offset < 120)
+      -- Stable: same key → same offset
+      assert.are.equal(offset, Brain.brain_assess_tick_offset("player|1"))
+    end)
+
+    it("returns different offsets for different keys", function()
+      local offsets = {}
+      for i = 1, 20 do
+        local offset = Brain.brain_assess_tick_offset("force|" .. i)
+        offsets[offset] = true
+      end
+      -- At least 2 distinct offsets across 20 different keys
+      local count = 0
+      for _ in pairs(offsets) do count = count + 1 end
+      assert.is_true(count >= 2)
+    end)
+
+    it("returns 0 for nil or empty key", function()
+      assert.are.equal(0, Brain.brain_assess_tick_offset(nil))
+      assert.are.equal(0, Brain.brain_assess_tick_offset(""))
+    end)
+  end)
+
+  describe("process_due_brains", function()
+    before_each(function()
+      storage.brains = {}
+      storage.workshops = {}
+      Storage.preflight_replans_remaining = 4
+    end)
+
+    it("processes only brains whose tick offset matches the current tick", function()
+      -- Two brains with different keys → different offsets.
+      local net = {valid = true}
+      storage.brains = {
+        ["player|1"] = {
+          key = "player|1",
+          force_name = "player",
+          network_id = 1,
+          workshops = {1},
+          recipe_choices = {},
+          raw_supply_counts = {},
+          next_schedule_tick = 0,
+          network = net
+        },
+        ["player|2"] = {
+          key = "player|2",
+          force_name = "player",
+          network_id = 2,
+          workshops = {2},
+          recipe_choices = {},
+          raw_supply_counts = {},
+          next_schedule_tick = 0,
+          network = net
+        }
+      }
+
+      local processed = {}
+      local orig_process = Brain.process_brain
+      Brain.process_brain = function(brain)
+        table.insert(processed, brain.key)
+      end
+
+      -- Find a tick where only brain 1 is due, not brain 2.
+      local offset1 = Brain.brain_assess_tick_offset("player|1")
+      local offset2 = Brain.brain_assess_tick_offset("player|2")
+      local tick = offset1
+      while tick % 120 == offset2 do
+        tick = tick + 120
+      end
+
+      game.tick = tick
+      Brain.process_due_brains()
+
+      Brain.process_brain = orig_process
+
+      assert.are.equal(1, #processed)
+      assert.are.equal("player|1", processed[1])
+    end)
+
+    it("skips brains with no workshops", function()
+      storage.brains = {
+        ["player|1"] = {
+          key = "player|1",
+          force_name = "player",
+          network_id = 1,
+          workshops = {},
+          recipe_choices = {},
+          raw_supply_counts = {},
+          next_schedule_tick = 0,
+          network = {valid = true}
+        }
+      }
+
+      local processed = {}
+      local orig_process = Brain.process_brain
+      Brain.process_brain = function(brain)
+        table.insert(processed, brain.key)
+      end
+
+      game.tick = Brain.brain_assess_tick_offset("player|1")
+      Brain.process_due_brains()
+
+      Brain.process_brain = orig_process
+      assert.are.equal(0, #processed)
+    end)
+
+    it("removes brains with invalid network", function()
+      storage.brains = {
+        ["player|1"] = {
+          key = "player|1",
+          force_name = "player",
+          network_id = 1,
+          workshops = {1},
+          recipe_choices = {},
+          raw_supply_counts = {},
+          next_schedule_tick = 0,
+          network = {valid = false}
+        }
+      }
+
+      local orig_process = Brain.process_brain
+      Brain.process_brain = function() end
+
+      game.tick = Brain.brain_assess_tick_offset("player|1")
+      Brain.process_due_brains()
+
+      Brain.process_brain = orig_process
+      assert.is_nil(storage.brains["player|1"])
     end)
   end)
 end)

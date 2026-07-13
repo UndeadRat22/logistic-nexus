@@ -405,6 +405,19 @@ end
 -- ASSESS ALL WORKSHOPS
 ------------------------------------------------------------
 
+function M.brain_assess_tick_offset(key)
+  if not key or key == "" then
+    return 0
+  end
+
+  local hash = 0
+  for i = 1, #key do
+    hash = (hash * 31 + string.byte(key, i)) % 1000000007
+  end
+
+  return hash % C.ASSESS_INTERVAL
+end
+
 function M.assess_all_workshops()
   Storage.init_storage()
   Storage.init_brains()
@@ -451,6 +464,26 @@ function M.assess_all_workshops()
       M.process_brain(brain)
     else
       storage.brains[key] = nil
+    end
+  end
+end
+
+function M.process_due_brains()
+  Storage.init_storage()
+  Storage.preflight_replans_remaining = C.PREFLIGHT_REPLANS_PER_ASSESS
+
+  local slot = game.tick % C.ASSESS_INTERVAL
+
+  for key, brain in pairs(storage.brains or {}) do
+    if M.brain_assess_tick_offset(key) == slot then
+      if brain.network
+          and brain.network.valid
+          and brain.workshops
+          and #brain.workshops > 0 then
+        M.process_brain(brain)
+      else
+        storage.brains[key] = nil
+      end
     end
   end
 end
