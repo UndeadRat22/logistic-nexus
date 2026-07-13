@@ -1,4 +1,4 @@
--- AG Mall
+-- Logistic Nexus
 -- Workshop assignment lifecycle, internal inventory, and worker ticking.
 
 local C = require("scripts.constants")

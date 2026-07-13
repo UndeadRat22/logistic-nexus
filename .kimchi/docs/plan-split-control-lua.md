@@ -2,7 +2,7 @@
 
 ## Context
 
-`control.lua` is a 4279-line monolith containing all runtime logic for the AG Mall Factorio mod. It has clear section comments (STORAGE, STATUS, COMPANION ENTITIES, PLANNER, WORKSHOP REGISTRATION, EVENTS) but zero module boundaries — everything is local functions in one file, with forward declarations bridging circular dependencies.
+`control.lua` is a 4279-line monolith containing all runtime logic for the Logistic Nexus Factorio mod. It has clear section comments (STORAGE, STATUS, COMPANION ENTITIES, PLANNER, WORKSHOP REGISTRATION, EVENTS) but zero module boundaries — everything is local functions in one file, with forward declarations bridging circular dependencies.
 
 **Constraint: No behavioural changes.** This is a pure refactor + test scaffolding.
 

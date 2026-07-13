@@ -1,11 +1,11 @@
-Enhanced /ag-mall-debug diagnostic patch for AG Mall 0.1.8
+Enhanced /logistic-nexus-debug diagnostic patch for Logistic Nexus 0.1.8
 
-This patch enhances the /ag-mall-debug command to print WHY a recipe is rejected.
+This patch enhances the /logistic-nexus-debug command to print WHY a recipe is rejected.
 It shows workshop crafting categories, recipe categories, category match result,
 product amounts, ingredient parsing, and full product details.
 
 Apply to stock 0.1.8 control.lua. Then in-game:
-  /ag-mall-debug transport-belt
+  /logistic-nexus-debug transport-belt
 
 The output will tell us exactly which check in recipe_can_make_item() fails.
 
@@ -13,10 +13,10 @@ The output will tell us exactly which check in recipe_can_make_item() fails.
 
 Find this block in control.lua (around line 3543):
 
-    player.print("AG Mall debug: no enabled AG Mall-compatible recipe for " .. item_name .. ".")
+    player.print("Logistic Nexus debug: no enabled Logistic Nexus-compatible recipe for " .. item_name .. ".")
     if source_recipe then
       player.print(
-        "AG Mall debug: source recipe "
+        "Logistic Nexus debug: source recipe "
             .. source_recipe.name
             .. " enabled="
             .. tostring(source_recipe.enabled)
@@ -28,10 +28,10 @@ Find this block in control.lua (around line 3543):
 
 Replace with:
 
-    player.print("AG Mall debug: no enabled AG Mall-compatible recipe for " .. item_name .. ".")
+    player.print("Logistic Nexus debug: no enabled Logistic Nexus-compatible recipe for " .. item_name .. ".")
     if source_recipe then
       player.print(
-        "AG Mall debug: source recipe "
+        "Logistic Nexus debug: source recipe "
             .. source_recipe.name
             .. " enabled="
             .. tostring(source_recipe.enabled)
@@ -50,14 +50,14 @@ Replace with:
             cat_str = cat_str .. tostring(c) .. " "
           end
         end
-        player.print("AG Mall debug: workshop crafting_categories: [" .. cat_str .. "]")
+        player.print("Logistic Nexus debug: workshop crafting_categories: [" .. cat_str .. "]")
         if source_recipe.valid then
           local src_cats = source_recipe.categories or {}
           local src_cat_str = ""
           for _, c in pairs(src_cats) do
             src_cat_str = src_cat_str .. tostring(c) .. " "
           end
-          player.print("AG Mall debug: recipe categories: [" .. src_cat_str .. "]")
+          player.print("Logistic Nexus debug: recipe categories: [" .. src_cat_str .. "]")
           local has_cat = false
           if cats then
             for k, v in pairs(cats) do
@@ -68,14 +68,14 @@ Replace with:
               end
             end
           end
-          player.print("AG Mall debug: recipe_has_supported_category=" .. tostring(has_cat))
+          player.print("Logistic Nexus debug: recipe_has_supported_category=" .. tostring(has_cat))
           local pa = recipe_product_amount(source_recipe, item_name)
-          player.print("AG Mall debug: recipe_product_amount=" .. tostring(pa))
+          player.print("Logistic Nexus debug: recipe_product_amount=" .. tostring(pa))
           local ings = recipe_item_ingredients(source_recipe)
-          player.print("AG Mall debug: recipe_item_ingredients=" .. tostring(ings and #ings or "nil"))
-          player.print("AG Mall debug: recipe.products count=" .. tostring(#(source_recipe.products or {})))
+          player.print("Logistic Nexus debug: recipe_item_ingredients=" .. tostring(ings and #ings or "nil"))
+          player.print("Logistic Nexus debug: recipe.products count=" .. tostring(#(source_recipe.products or {})))
           for _, p in pairs(source_recipe.products or {}) do
-            player.print("AG Mall debug:   product: type=" .. tostring(p.type) .. " name=" .. tostring(p.name) .. " amount=" .. tostring(p.amount) .. " amount_min=" .. tostring(p.amount_min) .. " amount_max=" .. tostring(p.amount_max) .. " probability=" .. tostring(p.probability))
+            player.print("Logistic Nexus debug:   product: type=" .. tostring(p.type) .. " name=" .. tostring(p.name) .. " amount=" .. tostring(p.amount) .. " amount_min=" .. tostring(p.amount_min) .. " amount_max=" .. tostring(p.amount_max) .. " probability=" .. tostring(p.probability))
           end
         end
       end

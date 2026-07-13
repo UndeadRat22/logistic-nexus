@@ -1,4 +1,4 @@
--- AG Mall
+-- Logistic Nexus
 -- Logistic network queries: supply counts, requester points, inventory access.
 
 local C = require("scripts.constants")

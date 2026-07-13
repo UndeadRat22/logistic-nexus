@@ -1,4 +1,4 @@
--- AG Mall
+-- Logistic Nexus
 -- Construction scanning, reservations, and shortage collection.
 
 local C = require("scripts.constants")

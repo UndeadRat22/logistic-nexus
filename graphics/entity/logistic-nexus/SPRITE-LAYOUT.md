@@ -1,10 +1,10 @@
-# AG Mall Sprite Layout
+# Logistic Nexus Sprite Layout
 
 Both runtime sprite sheets contain 32 frames arranged as 8 columns by 4 rows.
 
 ## Main Sheet
 
-- Runtime file: `ag-mall.png`
+- Runtime file: `logistic-nexus.png`
 - Expanded template: `assembling-machine-1.png`
 - Frame size: 278 x 290 pixels
 - Original machine area: x 0-213, y 64-289
@@ -13,7 +13,7 @@ Both runtime sprite sheets contain 32 frames arranged as 8 columns by 4 rows.
 
 ## Shadow Sheet
 
-- Runtime file: `ag-mall-shadow.png`
+- Runtime file: `logistic-nexus-shadow.png`
 - Expanded template: `assembling-machine-1-shadow.png`
 - Frame size: 264 x 247 pixels
 - Original shadow area: x 0-189, y 82-246

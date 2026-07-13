@@ -1,4 +1,4 @@
--- AG Mall
+-- Logistic Nexus
 -- Craft plan building: determines what to craft and what to request.
 
 local C = require("scripts.constants")

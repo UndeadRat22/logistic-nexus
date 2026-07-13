@@ -1,4 +1,4 @@
--- AG Mall
+-- Logistic Nexus
 -- Workshop registration, debug commands, rebuild, and recipe sync.
 
 local C = require("scripts.constants")
@@ -343,13 +343,13 @@ function M.debug_mall_item(player, item_name)
 
   local workshop_data = find_debug_workshop(player)
   if not workshop_data then
-    player.print("AG Mall debug: no AG Mall workshop found for this force.")
+    player.print("Logistic Nexus debug: no Logistic Nexus workshop found for this force.")
     return
   end
 
   local network = Network.get_network_for_workshop(workshop_data)
   if not network then
-    player.print("AG Mall debug: selected AG Mall is outside a logistic network.")
+    player.print("Logistic Nexus debug: selected Logistic Nexus is outside a logistic network.")
     return
   end
 
@@ -358,10 +358,10 @@ function M.debug_mall_item(player, item_name)
     local source_recipe = network.force.recipes[item_name]
     local barrelled_recipe = network.force.recipes[C.BARRELLED_RECIPE_PREFIX .. item_name]
 
-    player.print("AG Mall debug: no enabled AG Mall-compatible recipe for " .. item_name .. ".")
+    player.print("Logistic Nexus debug: no enabled Logistic Nexus-compatible recipe for " .. item_name .. ".")
     if source_recipe then
       player.print(
-        "AG Mall debug: source recipe "
+        "Logistic Nexus debug: source recipe "
             .. source_recipe.name
             .. " enabled="
             .. tostring(source_recipe.enabled)
@@ -380,11 +380,11 @@ function M.debug_mall_item(player, item_name)
             cat_str = cat_str .. tostring(c) .. " "
           end
         end
-        player.print("AG Mall debug: workshop crafting_categories: [" .. cat_str .. "]")
+        player.print("Logistic Nexus debug: workshop crafting_categories: [" .. cat_str .. "]")
         if source_recipe.valid then
           local src_cat = source_recipe.category
           local src_cat_str = src_cat and tostring(src_cat) or ""
-          player.print("AG Mall debug: recipe category: [" .. src_cat_str .. "]")
+          player.print("Logistic Nexus debug: recipe category: [" .. src_cat_str .. "]")
           local has_cat = false
           if cats then
             for k, v in pairs(cats) do
@@ -395,21 +395,21 @@ function M.debug_mall_item(player, item_name)
               end
             end
           end
-          player.print("AG Mall debug: recipe_has_supported_category=" .. tostring(has_cat))
+          player.print("Logistic Nexus debug: recipe_has_supported_category=" .. tostring(has_cat))
           local pa = Recipes.recipe_product_amount(source_recipe, item_name)
-          player.print("AG Mall debug: recipe_product_amount=" .. tostring(pa))
+          player.print("Logistic Nexus debug: recipe_product_amount=" .. tostring(pa))
           local ings = Recipes.recipe_item_ingredients(source_recipe)
-          player.print("AG Mall debug: recipe_item_ingredients=" .. tostring(ings and #ings or "nil"))
-          player.print("AG Mall debug: recipe.products count=" .. tostring(#(source_recipe.products or {})))
+          player.print("Logistic Nexus debug: recipe_item_ingredients=" .. tostring(ings and #ings or "nil"))
+          player.print("Logistic Nexus debug: recipe.products count=" .. tostring(#(source_recipe.products or {})))
           for _, p in pairs(source_recipe.products or {}) do
-            player.print("AG Mall debug:   product: type=" .. tostring(p.type) .. " name=" .. tostring(p.name) .. " amount=" .. tostring(p.amount) .. " amount_min=" .. tostring(p.amount_min) .. " amount_max=" .. tostring(p.amount_max) .. " probability=" .. tostring(p.probability))
+            player.print("Logistic Nexus debug:   product: type=" .. tostring(p.type) .. " name=" .. tostring(p.name) .. " amount=" .. tostring(p.amount) .. " amount_min=" .. tostring(p.amount_min) .. " amount_max=" .. tostring(p.amount_max) .. " probability=" .. tostring(p.probability))
           end
         end
       end
     end
     if barrelled_recipe then
       player.print(
-        "AG Mall debug: barrelled recipe "
+        "Logistic Nexus debug: barrelled recipe "
             .. barrelled_recipe.name
             .. " enabled="
             .. tostring(barrelled_recipe.enabled)
@@ -438,14 +438,14 @@ function M.debug_mall_item(player, item_name)
     {trace = trace}
   )
 
-  player.print("AG Mall debug: craft trace for " .. item_name)
+  player.print("Logistic Nexus debug: craft trace for " .. item_name)
   for _, line in ipairs(trace) do
-    player.print("AG Mall debug: " .. line)
+    player.print("Logistic Nexus debug: " .. line)
   end
 
   if not plan then
     player.print(
-      "AG Mall debug: PLAN BLOCKED - "
+      "Logistic Nexus debug: PLAN BLOCKED - "
           .. (blocked.reason or "unknown")
           .. " at "
           .. (blocked.item or item_name)
@@ -453,7 +453,7 @@ function M.debug_mall_item(player, item_name)
     )
   else
     player.print(
-      "AG Mall debug: plan OK - "
+      "Logistic Nexus debug: plan OK - "
           .. #plan.steps
           .. " crafting step(s), recipe: "
           .. recipe.name
@@ -461,7 +461,7 @@ function M.debug_mall_item(player, item_name)
     )
     for _, request in ipairs(plan.requests or {}) do
       player.print(
-        "AG Mall debug: request from network: "
+        "Logistic Nexus debug: request from network: "
             .. request.name
             .. " x"
             .. request.amount
@@ -490,13 +490,13 @@ function M.debug_construction_item(player, item_name)
   end
 
   if not (network and network.valid) then
-    player.print("AG Mall construction debug: no logistic network at player or selected AG Mall.")
+    player.print("Logistic Nexus construction debug: no logistic network at player or selected Logistic Nexus.")
     return
   end
 
   local surface, blocks = Construction.construction_scan_blocks(network)
   if not (surface and blocks and #blocks > 0) then
-    player.print("AG Mall construction debug: selected network has no construction scan area.")
+    player.print("Logistic Nexus construction debug: selected network has no construction scan area.")
     return
   end
 
@@ -620,7 +620,7 @@ function M.debug_construction_item(player, item_name)
 
   local reserved = Construction.get_construction_reservation(network, item_name, "normal", counted_items)
   player.print(string.format(
-    "AG Mall construction debug: %s scanned=%d matching=%d registered=%d in-network=%d counted-ghosts=%d counted-items=%d reserved=%d net=%s.",
+    "Logistic Nexus construction debug: %s scanned=%d matching=%d registered=%d in-network=%d counted-ghosts=%d counted-items=%d reserved=%d net=%s.",
     item_name,
     scanned,
     matching,
@@ -633,7 +633,7 @@ function M.debug_construction_item(player, item_name)
   ))
 
   for _, sample in ipairs(samples) do
-    player.print("AG Mall construction debug: " .. sample)
+    player.print("Logistic Nexus construction debug: " .. sample)
   end
 end
 
@@ -670,19 +670,19 @@ function M.debug_status(command)
   end
 
   if not (network and network.valid) then
-    emit("AG Mall: no logistic network at the player or selected mall.")
+    emit("Logistic Nexus: no logistic network at the player or selected mall.")
     return
   end
 
   local brain = storage.brains and storage.brains[Util.brain_key(network)]
   local analysis = brain and brain.last_analysis
   if not analysis then
-    emit("AG Mall: this network has not completed an allocation scan yet.")
+    emit("Logistic Nexus: this network has not completed an allocation scan yet.")
     return
   end
 
   emit(string.format(
-    "AG Mall: %d malls, %d idle, %d assigned; %d shortages, %d craftable candidates, P=%d from %d request filters; scan age %d ticks%s",
+    "Logistic Nexus: %d malls, %d idle, %d assigned; %d shortages, %d craftable candidates, P=%d from %d request filters; scan age %d ticks%s",
     analysis.total_workshops or 0,
     analysis.idle_workshops or 0,
     analysis.assigned_workshops or 0,
@@ -696,7 +696,7 @@ function M.debug_status(command)
 
   for index, target in ipairs(analysis.targets or {}) do
     if index > target_limit then
-      emit("AG Mall: additional shortages omitted.")
+      emit("Logistic Nexus: additional shortages omitted.")
       break
     end
 
@@ -720,7 +720,7 @@ function M.debug_status(command)
 
   for index, worker in ipairs(Brain.collect_worker_metrics(brain)) do
     if index > 20 then
-      emit("AG Mall: additional workers omitted.")
+      emit("Logistic Nexus: additional workers omitted.")
       break
     end
 

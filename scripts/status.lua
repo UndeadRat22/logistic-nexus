@@ -1,4 +1,4 @@
--- AG Mall
+-- Logistic Nexus
 -- Entity status display and goal sprite management.
 
 local C = require("scripts.constants")
@@ -26,21 +26,21 @@ end
 function M.set_idle_status(entity)
   M.set_custom_status(entity, "idle", {
     diode = defines.entity_status_diode.green,
-    label = {"ag-mall.status-idle"}
+    label = {"logistic-nexus.status-idle"}
   })
 end
 
 function M.set_blocked_status(entity)
   M.set_custom_status(entity, "blocked", {
     diode = defines.entity_status_diode.red,
-    label = {"ag-mall.status-blocked"}
+    label = {"logistic-nexus.status-blocked"}
   })
 end
 
 function M.set_no_network_status(entity)
   M.set_custom_status(entity, "no-network", {
     diode = defines.entity_status_diode.red,
-    label = {"ag-mall.status-no-network"}
+    label = {"logistic-nexus.status-no-network"}
   })
 end
 
@@ -49,21 +49,21 @@ function M.set_no_shortage_status(entity, request_count, shortage_count)
   shortage_count = shortage_count or 0
   M.set_custom_status(entity, "no-shortage|" .. request_count .. "|" .. shortage_count, {
     diode = defines.entity_status_diode.yellow,
-    label = {"ag-mall.status-no-shortage", request_count, shortage_count}
+    label = {"logistic-nexus.status-no-shortage", request_count, shortage_count}
   })
 end
 
 function M.set_working_status(entity, item_name, shortage)
   M.set_custom_status(entity, "working|" .. (item_name or "") .. "|" .. (shortage or 0), {
     diode = defines.entity_status_diode.green,
-    label = {"ag-mall.status-working", "[item=" .. item_name .. "]", shortage}
+    label = {"logistic-nexus.status-working", "[item=" .. item_name .. "]", shortage}
   })
 end
 
 function M.set_finishing_status(entity, item_name)
   M.set_custom_status(entity, "finishing|" .. (item_name or ""), {
     diode = defines.entity_status_diode.yellow,
-    label = {"ag-mall.status-finishing", item_name and "[item=" .. item_name .. "]" or ""}
+    label = {"logistic-nexus.status-finishing", item_name and "[item=" .. item_name .. "]" or ""}
   })
 end
 
@@ -121,7 +121,7 @@ end
 
 function M.destroy_all_goal_sprites()
   pcall(function()
-    for _, object in pairs(rendering.get_all_objects("ag-mall")) do
+    for _, object in pairs(rendering.get_all_objects("logistic-nexus")) do
       if object and object.valid then
         object.destroy()
       end
@@ -129,7 +129,7 @@ function M.destroy_all_goal_sprites()
   end)
 
   pcall(function()
-    rendering.clear("ag-mall")
+    rendering.clear("logistic-nexus")
   end)
 
   for _, workshop_data in pairs(storage.workshops or {}) do

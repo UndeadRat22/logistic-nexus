@@ -1,4 +1,4 @@
--- AG Mall
+-- Logistic Nexus
 -- Recipe validation, finding, and caching.
 
 local C = require("scripts.constants")

@@ -1,4 +1,4 @@
--- AG Mall
+-- Logistic Nexus
 -- Brain management: scheduling, candidate building, assessment.
 
 local C = require("scripts.constants")

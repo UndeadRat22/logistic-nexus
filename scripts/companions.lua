@@ -1,4 +1,4 @@
--- AG Mall
+-- Logistic Nexus
 -- Companion entity management: requester, provider, inserters.
 
 local C = require("scripts.constants")
@@ -107,7 +107,7 @@ local function get_requester_section(requester, trash_not_requested)
   end
 
   local ok, section = pcall(function()
-    return point.add_section("AG Mall")
+    return point.add_section("Logistic Nexus")
   end)
 
   if ok and section and section.valid then

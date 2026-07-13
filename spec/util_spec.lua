@@ -46,8 +46,8 @@ describe("util", function()
     end)
 
     it("splits compound name with pipe", function()
-      local name, quality = Util.split_item_key("ag-mall-barrelled-water|legendary")
-      assert.are.equal("ag-mall-barrelled-water", name)
+      local name, quality = Util.split_item_key("logistic-nexus-barrelled-water|legendary")
+      assert.are.equal("logistic-nexus-barrelled-water", name)
       assert.are.equal("legendary", quality)
     end)
 

@@ -1,16 +1,16 @@
--- AG Mall
+-- Logistic Nexus
 -- Shared constants.
 
 local M = {}
 
-M.WORKSHOP_NAME = "ag-mall-workshop"
-M.MAP_DISPLAY_NAME = "ag-mall-map-display"
-M.WORLD_DISPLAY_NAME = "ag-mall-world-display"
-M.REQUESTER_NAME = "ag-mall-requester"
-M.PROVIDER_NAME = "ag-mall-provider"
-M.INPUT_INSERTER_NAME = "ag-mall-input-inserter"
-M.OUTPUT_INSERTER_NAME = "ag-mall-output-inserter"
-M.BARRELLED_RECIPE_PREFIX = "ag-mall-barrelled-"
+M.WORKSHOP_NAME = "logistic-nexus-workshop"
+M.MAP_DISPLAY_NAME = "logistic-nexus-map-display"
+M.WORLD_DISPLAY_NAME = "logistic-nexus-world-display"
+M.REQUESTER_NAME = "logistic-nexus-requester"
+M.PROVIDER_NAME = "logistic-nexus-provider"
+M.INPUT_INSERTER_NAME = "logistic-nexus-input-inserter"
+M.OUTPUT_INSERTER_NAME = "logistic-nexus-output-inserter"
+M.BARRELLED_RECIPE_PREFIX = "logistic-nexus-barrelled-"
 M.EMPTY_BARREL_ITEM = "barrel"
 
 M.ASSESS_INTERVAL = 120

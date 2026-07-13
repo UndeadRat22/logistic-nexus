@@ -1,4 +1,4 @@
--- AG Mall
+-- Logistic Nexus
 -- Pure utility functions with no Factorio API dependency.
 -- These are the primary unit-test targets.
 

@@ -1,9 +1,9 @@
--- AG Mall
+-- Logistic Nexus
 -- Generate item-only recipe variants for recipes that normally need fluids.
 
 local DataStageUtil = require("prototypes.data_stage_util")
 
-local PREFIX = "ag-mall-barrelled-"
+local PREFIX = "logistic-nexus-barrelled-"
 local BARREL_SIZE = 50
 local EMPTY_BARREL_ITEM = "barrel"
 local MAX_BARREL_BATCH = 1000
@@ -282,15 +282,15 @@ for _, technology in pairs(data.raw.technology) do
   end
 end
 
--- Ensure the AG Mall workshop can craft recipes from mod-added categories.
+-- Ensure the Logistic Nexus workshop can craft recipes from mod-added categories.
 -- Categories are collected from every recipe so item-only mod recipes are
 -- supported without requiring mod authors to patch the workshop prototype.
-local workshop = data.raw["assembling-machine"]["ag-mall-workshop"]
+local workshop = data.raw["assembling-machine"]["logistic-nexus-workshop"]
 if workshop then
   local setting_value = settings
       and settings.startup
-      and settings.startup["ag-mall-excluded-categories"]
-      and settings.startup["ag-mall-excluded-categories"].value
+      and settings.startup["logistic-nexus-excluded-categories"]
+      and settings.startup["logistic-nexus-excluded-categories"].value
   local excluded_categories = DataStageUtil.parse_excluded_categories(setting_value)
   local categories = {}
   for _, category in pairs(workshop.crafting_categories or {}) do

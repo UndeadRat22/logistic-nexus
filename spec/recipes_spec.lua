@@ -11,7 +11,7 @@ describe("recipes", function()
 
     it("returns true for hidden barrelled recipe", function()
       assert.is_true(Recipes.recipe_is_available_to_mall({
-        name = "ag-mall-barrelled-water",
+        name = "logistic-nexus-barrelled-water",
         hidden = true
       }))
     end)
@@ -73,7 +73,7 @@ describe("recipes", function()
 
     it("returns nil for barrelled recipe producing empty barrel", function()
       local recipe = {
-        name = "ag-mall-barrelled-water",
+        name = "logistic-nexus-barrelled-water",
         products = {
           {type = "item", name = "barrel", amount = 1}
         }

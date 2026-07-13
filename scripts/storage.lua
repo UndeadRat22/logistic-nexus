@@ -1,4 +1,4 @@
--- AG Mall
+-- Logistic Nexus
 -- Storage initialization and shared mutable state.
 
 local Util = require("scripts.util")

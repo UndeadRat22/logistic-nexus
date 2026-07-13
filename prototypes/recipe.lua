@@ -1,8 +1,8 @@
 data:extend({
   {
     type = "recipe",
-    name = "ag-mall-workshop",
-    localised_name = {"recipe-name.ag-mall-workshop"},
+    name = "logistic-nexus-workshop",
+    localised_name = {"recipe-name.logistic-nexus-workshop"},
     enabled = false,
     energy_required = 10,
     ingredients = {
@@ -15,7 +15,7 @@ data:extend({
       {type = "item", name = "pipe", amount = 2}
     },
     results = {
-      {type = "item", name = "ag-mall-workshop", amount = 1}
+      {type = "item", name = "logistic-nexus-workshop", amount = 1}
     }
   }
 })

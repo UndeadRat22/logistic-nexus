@@ -1,4 +1,4 @@
--- AG Mall
+-- Logistic Nexus
 -- Event handlers and command registration.
 
 local C = require("scripts.constants")
@@ -192,7 +192,7 @@ function M.register_events()
     script.on_event(defines.events.on_technology_effects_reset, M.on_technology_effects_reset)
   end
 
-  commands.add_command("ag-mall-debug", "Print AG Mall recipe debug for an item, for example: /ag-mall-debug concrete", function(command)
+  commands.add_command("logistic-nexus-debug", "Print Logistic Nexus recipe debug for an item, for example: /logistic-nexus-debug concrete", function(command)
     local player = command.player_index and game.get_player(command.player_index)
     if not player then
       return
@@ -206,7 +206,7 @@ function M.register_events()
     Registration.debug_mall_item(player, item_name)
   end)
 
-  commands.add_command("ag-mall-debug-construction", "Print AG Mall construction ghost debug for an item, for example: /ag-mall-debug-construction express-transport-belt", function(command)
+  commands.add_command("logistic-nexus-debug-construction", "Print Logistic Nexus construction ghost debug for an item, for example: /logistic-nexus-debug-construction express-transport-belt", function(command)
     local player = command.player_index and game.get_player(command.player_index)
     if not player then
       return
@@ -216,14 +216,14 @@ function M.register_events()
         and string.match(command.parameter, "^%s*(.-)%s*$")
         or ""
     if item_name == "" then
-      player.print("Usage: /ag-mall-debug-construction item-name")
+      player.print("Usage: /logistic-nexus-debug-construction item-name")
       return
     end
 
     Registration.debug_construction_item(player, item_name)
   end)
 
-  commands.add_command("ag-mall-status", "Print the latest AG Mall network allocation analysis", function(command)
+  commands.add_command("logistic-nexus-status", "Print the latest Logistic Nexus network allocation analysis", function(command)
     Registration.debug_status(command)
   end)
 end

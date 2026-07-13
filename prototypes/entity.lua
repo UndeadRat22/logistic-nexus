@@ -6,14 +6,14 @@ local provider = table.deepcopy(data.raw["logistic-container"]["active-provider-
 local input_inserter = table.deepcopy(data.raw["inserter"]["fast-inserter"])
 local output_inserter = table.deepcopy(data.raw["inserter"]["fast-inserter"])
 
-workshop.name = "ag-mall-workshop"
-workshop.localised_name = {"entity-name.ag-mall-workshop"}
-workshop.localised_description = {"entity-description.ag-mall-workshop"}
-workshop.icon = "__ag-mall__/graphics/icons/ag-mall-workshop.png"
+workshop.name = "logistic-nexus-workshop"
+workshop.localised_name = {"entity-name.logistic-nexus-workshop"}
+workshop.localised_description = {"entity-description.logistic-nexus-workshop"}
+workshop.icon = "__logistic-nexus__/graphics/icons/logistic-nexus-workshop.png"
 workshop.icon_size = 64
 workshop.minable = {
   mining_time = 0.3,
-  result = "ag-mall-workshop"
+  result = "logistic-nexus-workshop"
 }
 workshop.fast_replaceable_group = nil
 workshop.next_upgrade = nil
@@ -37,12 +37,12 @@ workshop.circuit_connector = circuit_connector_definitions.create_vector(
 )
 workshop.graphics_set = table.deepcopy(data.raw["assembling-machine"]["assembling-machine-1"].graphics_set)
 workshop.graphics_set.animation.layers[1].filename =
-  "__ag-mall__/graphics/entity/ag-mall/ag-mall.png"
+  "__logistic-nexus__/graphics/entity/logistic-nexus/logistic-nexus.png"
 workshop.graphics_set.animation.layers[1].width = 278
 workshop.graphics_set.animation.layers[1].height = 290
 workshop.graphics_set.animation.layers[1].shift = util.by_pixel(0, 2)
 workshop.graphics_set.animation.layers[2].filename =
-  "__ag-mall__/graphics/entity/ag-mall/ag-mall-shadow.png"
+  "__logistic-nexus__/graphics/entity/logistic-nexus/logistic-nexus-shadow.png"
 workshop.graphics_set.animation.layers[2].width = 264
 workshop.graphics_set.animation.layers[2].height = 247
 workshop.graphics_set.animation.layers[2].frame_count = 32
@@ -59,8 +59,8 @@ workshop.selection_box = {{-2, -1}, {1, 2}}
 workshop.flags = workshop.flags or {}
 table.insert(workshop.flags, "hide-alt-info")
 
-map_display.name = "ag-mall-map-display"
-map_display.localised_name = {"entity-name.ag-mall-workshop"}
+map_display.name = "logistic-nexus-map-display"
+map_display.localised_name = {"entity-name.logistic-nexus-workshop"}
 map_display.minable = nil
 map_display.fast_replaceable_group = nil
 map_display.next_upgrade = nil
@@ -95,8 +95,8 @@ table.insert(map_display.flags, "not-deconstructable")
 table.insert(map_display.flags, "not-flammable")
 table.insert(map_display.flags, "not-repairable")
 
-world_display.name = "ag-mall-world-display"
-world_display.localised_name = {"entity-name.ag-mall-workshop"}
+world_display.name = "logistic-nexus-world-display"
+world_display.localised_name = {"entity-name.logistic-nexus-workshop"}
 world_display.minable = nil
 world_display.fast_replaceable_group = nil
 world_display.next_upgrade = nil
@@ -123,9 +123,9 @@ world_display.energy_source = {type = "void"}
 world_display.energy_usage = "1W"
 world_display.flags = table.deepcopy(map_display.flags)
 
-requester.name = "ag-mall-requester"
-requester.localised_name = {"entity-name.ag-mall-requester"}
-requester.localised_description = {"entity-description.ag-mall-requester"}
+requester.name = "logistic-nexus-requester"
+requester.localised_name = {"entity-name.logistic-nexus-requester"}
+requester.localised_description = {"entity-description.logistic-nexus-requester"}
 requester.minable = nil
 requester.hidden_in_factoriopedia = true
 requester.flags = {
@@ -136,9 +136,9 @@ requester.flags = {
 }
 requester.collision_mask = {layers = {}}
 
-provider.name = "ag-mall-provider"
-provider.localised_name = {"entity-name.ag-mall-provider"}
-provider.localised_description = {"entity-description.ag-mall-provider"}
+provider.name = "logistic-nexus-provider"
+provider.localised_name = {"entity-name.logistic-nexus-provider"}
+provider.localised_description = {"entity-description.logistic-nexus-provider"}
 provider.minable = nil
 provider.hidden_in_factoriopedia = true
 provider.flags = {
@@ -149,9 +149,9 @@ provider.flags = {
 }
 provider.collision_mask = {layers = {}}
 
-input_inserter.name = "ag-mall-input-inserter"
-input_inserter.localised_name = {"entity-name.ag-mall-input-inserter"}
-input_inserter.localised_description = {"entity-description.ag-mall-input-inserter"}
+input_inserter.name = "logistic-nexus-input-inserter"
+input_inserter.localised_name = {"entity-name.logistic-nexus-input-inserter"}
+input_inserter.localised_description = {"entity-description.logistic-nexus-input-inserter"}
 input_inserter.minable = nil
 input_inserter.next_upgrade = nil
 input_inserter.hidden_in_factoriopedia = true
@@ -165,9 +165,9 @@ input_inserter.flags = {
   "hide-alt-info"
 }
 
-output_inserter.name = "ag-mall-output-inserter"
-output_inserter.localised_name = {"entity-name.ag-mall-output-inserter"}
-output_inserter.localised_description = {"entity-description.ag-mall-output-inserter"}
+output_inserter.name = "logistic-nexus-output-inserter"
+output_inserter.localised_name = {"entity-name.logistic-nexus-output-inserter"}
+output_inserter.localised_description = {"entity-description.logistic-nexus-output-inserter"}
 output_inserter.minable = nil
 output_inserter.next_upgrade = nil
 output_inserter.hidden_in_factoriopedia = true

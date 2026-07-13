@@ -7,7 +7,7 @@ describe("brain", function()
   describe("candidate_choice_sort", function()
     it("prioritizes mall shortages", function()
       local a = {shortage = {name = "iron-plate"}, machine_count = 0, remaining_units = 5}
-      local b = {shortage = {name = "ag-mall-workshop"}, machine_count = 0, remaining_units = 5}
+      local b = {shortage = {name = "logistic-nexus-workshop"}, machine_count = 0, remaining_units = 5}
       assert.is_true(Brain.candidate_choice_sort(b, a))
       assert.is_false(Brain.candidate_choice_sort(a, b))
     end)
@@ -34,7 +34,7 @@ describe("brain", function()
     end)
 
     it("mall item always wins regardless of other fields", function()
-      local mall = {shortage = {name = "ag-mall-workshop"}, machine_count = 10, remaining_units = 1}
+      local mall = {shortage = {name = "logistic-nexus-workshop"}, machine_count = 10, remaining_units = 1}
       local other = {shortage = {name = "iron-plate"}, machine_count = 0, remaining_units = 100}
       assert.is_true(Brain.candidate_choice_sort(mall, other))
       assert.is_false(Brain.candidate_choice_sort(other, mall))

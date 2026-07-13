@@ -1,7 +1,7 @@
 data:extend({
   {
     type = "string-setting",
-    name = "ag-mall-excluded-categories",
+    name = "logistic-nexus-excluded-categories",
     setting_type = "startup",
     default_value = "",
     allow_blank = true,
