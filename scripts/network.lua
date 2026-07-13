@@ -115,9 +115,10 @@ function M.get_requester_owner_item_count(owner, name, quality)
     inventory_index = defines.inventory.car_trunk
   elseif owner.type == "cargo-wagon" then
     inventory_index = defines.inventory.cargo_wagon
-  elseif owner.type == "space-platform-hub"
-      or owner.type == "cargo-landing-pad" then
+  elseif owner.type == "space-platform-hub" then
     inventory_index = defines.inventory.hub_main
+  elseif owner.type == "cargo-landing-pad" then
+    inventory_index = defines.inventory.cargo_landing_pad_main
   else
     inventory_index = defines.inventory.chest
   end
