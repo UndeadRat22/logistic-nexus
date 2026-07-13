@@ -277,8 +277,33 @@ local function add_entity_ghost_request(construction_counts, network, ghost)
   return added
 end
 
-local function add_tile_ghost_request()
-  return false
+local function add_tile_ghost_request(construction_counts, network, ghost)
+  if not (ghost
+      and ghost.valid
+      and ghost.type == "tile-ghost") then
+    return false
+  end
+
+  local prototype = ghost.ghost_prototype
+  if not prototype then
+    return false
+  end
+
+  local added = false
+
+  for _, item in pairs(prototype.items_to_place_this or {}) do
+    if add_construction_item_request(
+        construction_counts,
+        network,
+        item.name,
+        item.count,
+        ghost.quality
+      ) then
+      added = true
+    end
+  end
+
+  return added
 end
 
 function M.add_ghost_request(construction_counts, network, ghost)

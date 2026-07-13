@@ -119,4 +119,72 @@ describe("construction", function()
       assert.are.equal("iron-plate", result[1].name)
     end)
   end)
+
+  describe("add_ghost_request", function()
+    local network = {network_id = 1, valid = true, force = {name = "player"}}
+
+    it("adds item requests for entity ghosts", function()
+      local ghost = {
+        valid = true,
+        type = "entity-ghost",
+        quality = "normal",
+        ghost_prototype = {
+          items_to_place_this = {
+            {name = "iron-plate", count = 2}
+          }
+        }
+      }
+
+      local counts = {}
+      local added = Construction.add_ghost_request(counts, network, ghost)
+
+      assert.is_true(added)
+      local key = "1|iron-plate|normal"
+      assert.is_not_nil(counts[key])
+      assert.are.equal(2, counts[key].requested)
+    end)
+
+    it("adds item requests for tile ghosts", function()
+      local ghost = {
+        valid = true,
+        type = "tile-ghost",
+        quality = "normal",
+        ghost_prototype = {
+          items_to_place_this = {
+            {name = "concrete", count = 10}
+          }
+        }
+      }
+
+      local counts = {}
+      local added = Construction.add_ghost_request(counts, network, ghost)
+
+      assert.is_true(added)
+      local key = "1|concrete|normal"
+      assert.is_not_nil(counts[key])
+      assert.are.equal(10, counts[key].requested)
+    end)
+
+    it("returns false for tile ghosts without items_to_place_this", function()
+      local ghost = {
+        valid = true,
+        type = "tile-ghost",
+        quality = "normal",
+        ghost_prototype = {
+          items_to_place_this = nil
+        }
+      }
+
+      local counts = {}
+      local added = Construction.add_ghost_request(counts, network, ghost)
+
+      assert.is_false(added)
+    end)
+
+    it("returns false for invalid ghost", function()
+      local counts = {}
+      local added = Construction.add_ghost_request(counts, network, {valid = false})
+      assert.is_false(added)
+    end)
+  end)
 end)
