@@ -294,6 +294,253 @@ describe("recipes", function()
     end)
   end)
 
+  describe("find_recipe_for_item", function()
+    local function make_workshop(categories)
+      return {
+        prototype = {
+          crafting_categories = categories or {crafting = true}
+        }
+      }
+    end
+
+    local function make_recipe(opts)
+      return {
+        name = opts.name or "iron-plate",
+        valid = opts.valid ~= false,
+        enabled = opts.enabled ~= false,
+        hidden = opts.hidden or false,
+        energy = opts.energy or 1,
+        products = opts.products or {{type = "item", name = "iron-plate", amount = 1}},
+        ingredients = opts.ingredients or {{type = "item", name = "iron-ore", amount = 1}},
+        has_category = function(cat)
+          local cats = opts.categories or {crafting = true}
+          return cats[cat] == true
+        end
+      }
+    end
+
+    local function make_force(recipes)
+      return {recipes = recipes or {}}
+    end
+
+    it("returns the exact-name recipe when it exists", function()
+      local recipe = make_recipe({name = "iron-plate"})
+      local force = make_force({["iron-plate"] = recipe})
+      local workshop = make_workshop()
+
+      local found, amount = Recipes.find_recipe_for_item(workshop, force, "iron-plate")
+      assert.are.equal(recipe, found)
+      assert.are.equal(1, amount)
+    end)
+
+    it("returns the lowest-energy recipe when multiple produce the item", function()
+      local recipe_fast = make_recipe({name = "fast-iron", energy = 0.5, products = {{type = "item", name = "iron-plate", amount = 1}}})
+      local recipe_slow = make_recipe({name = "slow-iron", energy = 2, products = {{type = "item", name = "iron-plate", amount = 1}}})
+      local force = make_force({["fast-iron"] = recipe_fast, ["slow-iron"] = recipe_slow})
+      local workshop = make_workshop()
+
+      local found = Recipes.find_recipe_for_item(workshop, force, "iron-plate")
+      assert.are.equal(recipe_fast, found)
+    end)
+
+    it("breaks energy ties by name ascending", function()
+      local recipe_b = make_recipe({name = "b-recipe", energy = 1, products = {{type = "item", name = "iron-plate", amount = 1}}})
+      local recipe_a = make_recipe({name = "a-recipe", energy = 1, products = {{type = "item", name = "iron-plate", amount = 1}}})
+      local force = make_force({["b-recipe"] = recipe_b, ["a-recipe"] = recipe_a})
+      local workshop = make_workshop()
+
+      local found = Recipes.find_recipe_for_item(workshop, force, "iron-plate")
+      assert.are.equal(recipe_a, found)
+    end)
+
+    it("returns nil when no recipe produces the item", function()
+      local force = make_force({["iron-plate"] = make_recipe({name = "iron-plate", products = {{type = "item", name = "copper-plate", amount = 1}}})})
+      local workshop = make_workshop()
+
+      local found = Recipes.find_recipe_for_item(workshop, force, "nonexistent")
+      assert.is_nil(found)
+    end)
+
+    it("returns nil when all recipes are disabled", function()
+      local recipe = make_recipe({name = "iron-plate", enabled = false})
+      local force = make_force({["iron-plate"] = recipe})
+      local workshop = make_workshop()
+
+      local found = Recipes.find_recipe_for_item(workshop, force, "iron-plate")
+      assert.is_nil(found)
+    end)
+
+    it("returns nil when recipe is hidden and non-barrelled", function()
+      local recipe = make_recipe({name = "secret", hidden = true, products = {{type = "item", name = "iron-plate", amount = 1}}})
+      local force = make_force({["secret"] = recipe})
+      local workshop = make_workshop()
+
+      local found = Recipes.find_recipe_for_item(workshop, force, "iron-plate")
+      assert.is_nil(found)
+    end)
+
+    it("skips recipes whose category the workshop lacks", function()
+      local recipe = make_recipe({name = "iron-plate", categories = {advanced = true}})
+      local force = make_force({["iron-plate"] = recipe})
+      local workshop = make_workshop({crafting = true})
+
+      local found = Recipes.find_recipe_for_item(workshop, force, "iron-plate")
+      assert.is_nil(found)
+    end)
+
+    it("prefers barrelled recipe over normal recipe", function()
+      local normal_recipe = make_recipe({name = "water", energy = 0.1, products = {{type = "item", name = "water", amount = 1}}})
+      local barrelled_recipe = make_recipe({
+        name = "logistic-nexus-barrelled-water",
+        hidden = true,
+        energy = 0.5,
+        products = {{type = "item", name = "water", amount = 1}}
+      })
+      local force = make_force({
+        ["water"] = normal_recipe,
+        ["logistic-nexus-barrelled-water"] = barrelled_recipe
+      })
+      local workshop = make_workshop()
+
+      local found = Recipes.find_recipe_for_item(workshop, force, "water")
+      assert.are.equal(barrelled_recipe, found)
+    end)
+  end)
+
+  describe("build_recipe_index", function()
+    local function make_recipe(opts)
+      return {
+        name = opts.name or "iron-plate",
+        valid = opts.valid ~= false,
+        enabled = opts.enabled ~= false,
+        hidden = opts.hidden or false,
+        energy = opts.energy or 1,
+        products = opts.products or {{type = "item", name = "iron-plate", amount = 1}},
+        ingredients = opts.ingredients or {{type = "item", name = "iron-ore", amount = 1}},
+        has_category = function(cat)
+          local cats = opts.categories or {crafting = true}
+          return cats[cat] == true
+        end
+      }
+    end
+
+    local function make_force(recipes)
+      return {recipes = recipes or {}}
+    end
+
+    it("builds an index mapping item_name to candidate recipes", function()
+      local recipe = make_recipe({name = "iron-plate"})
+      local force = make_force({["iron-plate"] = recipe})
+
+      local index = Recipes.build_recipe_index(force)
+      assert.is_not_nil(index["iron-plate"])
+      assert.are.equal(1, #index["iron-plate"])
+      assert.are.equal(recipe, index["iron-plate"][1].recipe)
+      assert.are.equal(1, index["iron-plate"][1].product_amount)
+    end)
+
+    it("excludes disabled recipes", function()
+      local recipe = make_recipe({name = "iron-plate", enabled = false})
+      local force = make_force({["iron-plate"] = recipe})
+
+      local index = Recipes.build_recipe_index(force)
+      assert.is_nil(index["iron-plate"])
+    end)
+
+    it("excludes hidden non-barrelled recipes", function()
+      local recipe = make_recipe({name = "secret", hidden = true})
+      local force = make_force({["secret"] = recipe})
+
+      local index = Recipes.build_recipe_index(force)
+      assert.is_nil(index["iron-plate"])
+    end)
+
+    it("includes hidden barrelled recipes", function()
+      local recipe = make_recipe({
+        name = "logistic-nexus-barrelled-water",
+        hidden = true,
+        products = {{type = "item", name = "water-barrel", amount = 1}}
+      })
+      local force = make_force({["logistic-nexus-barrelled-water"] = recipe})
+
+      local index = Recipes.build_recipe_index(force)
+      assert.is_not_nil(index["water-barrel"])
+      assert.are.equal(recipe, index["water-barrel"][1].recipe)
+    end)
+
+    it("excludes recipes with fluid products", function()
+      local recipe = make_recipe({
+        name = "oil",
+        products = {{type = "fluid", name = "crude-oil", amount = 10}}
+      })
+      local force = make_force({["oil"] = recipe})
+
+      local index = Recipes.build_recipe_index(force)
+      assert.is_nil(index["crude-oil"])
+    end)
+
+    it("excludes recipes with probabilistic products", function()
+      local recipe = make_recipe({
+        name = "gamble",
+        products = {{type = "item", name = "iron-plate", amount = 1, probability = 0.5}}
+      })
+      local force = make_force({["gamble"] = recipe})
+
+      local index = Recipes.build_recipe_index(force)
+      assert.is_nil(index["iron-plate"])
+    end)
+
+    it("excludes recipes with fluid ingredients", function()
+      local recipe = make_recipe({
+        name = "oil-refining",
+        products = {{type = "item", name = "plastic-bar", amount = 1}},
+        ingredients = {{type = "fluid", name = "crude-oil", amount = 10}}
+      })
+      local force = make_force({["oil-refining"] = recipe})
+
+      local index = Recipes.build_recipe_index(force)
+      assert.is_nil(index["plastic-bar"])
+    end)
+
+    it("sorts candidates by energy then name", function()
+      local recipe_slow = make_recipe({name = "z-slow", energy = 2, products = {{type = "item", name = "iron-plate", amount = 1}}})
+      local recipe_fast = make_recipe({name = "a-fast", energy = 0.5, products = {{type = "item", name = "iron-plate", amount = 1}}})
+      local recipe_mid = make_recipe({name = "m-mid", energy = 1, products = {{type = "item", name = "iron-plate", amount = 1}}})
+      local force = make_force({
+        ["z-slow"] = recipe_slow,
+        ["a-fast"] = recipe_fast,
+        ["m-mid"] = recipe_mid
+      })
+
+      local index = Recipes.build_recipe_index(force)
+      assert.are.equal(3, #index["iron-plate"])
+      assert.are.equal("a-fast", index["iron-plate"][1].recipe.name)
+      assert.are.equal("m-mid", index["iron-plate"][2].recipe.name)
+      assert.are.equal("z-slow", index["iron-plate"][3].recipe.name)
+    end)
+
+    it("aggregates multiple products from a single recipe", function()
+      local recipe = make_recipe({
+        name = "dual",
+        products = {
+          {type = "item", name = "iron-plate", amount = 2},
+          {type = "item", name = "copper-plate", amount = 3}
+        }
+      })
+      local force = make_force({["dual"] = recipe})
+
+      local index = Recipes.build_recipe_index(force)
+      assert.are.equal(2, index["iron-plate"][1].product_amount)
+      assert.are.equal(3, index["copper-plate"][1].product_amount)
+    end)
+
+    it("handles empty force recipes", function()
+      local force = make_force({})
+      local index = Recipes.build_recipe_index(force)
+      assert.are.same({}, index)
+    end)
+  end)
+
   describe("cached_recipe_for_item", function()
     local function make_workshop(categories)
       return {

@@ -261,6 +261,8 @@ local function reset_force_recipe_effects(force)
 end
 
 local function invalidate_force_recipe_caches(force)
+  Recipes.invalidate_recipe_index(force)
+
   for _, brain in pairs(storage.brains or {}) do
     if not force or brain.force_name == force.name then
       brain.recipe_choices = {}

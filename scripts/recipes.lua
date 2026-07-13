@@ -92,6 +92,66 @@ function M.recipe_can_make_item(workshop, recipe, item_name)
 end
 
 ------------------------------------------------------------
+-- RECIPE INDEX
+--
+-- A reverse index mapping item_name → sorted list of candidate recipes.
+-- Built once per force (or on research changes) so that recipe lookup is
+-- O(candidates_for_item) instead of O(all_recipes).
+------------------------------------------------------------
+
+local function recipe_is_indexable(recipe)
+  if not (recipe and recipe.valid and recipe.enabled) then
+    return false
+  end
+
+  if not M.recipe_is_available_to_mall(recipe) then
+    return false
+  end
+
+  local ingredients = M.recipe_item_ingredients(recipe)
+  if not ingredients then
+    return false
+  end
+
+  return true
+end
+
+function M.build_recipe_index(force)
+  local index = {}
+
+  for _, recipe in pairs(force.recipes or {}) do
+    if recipe_is_indexable(recipe) then
+      for _, product in pairs(recipe.products or {}) do
+        if product.type == "item" then
+          local amount = Util.fixed_product_amount(product)
+          if amount then
+            local name = product.name
+            if not index[name] then
+              index[name] = {}
+            end
+            table.insert(index[name], {
+              recipe = recipe,
+              product_amount = amount
+            })
+          end
+        end
+      end
+    end
+  end
+
+  for _, candidates in pairs(index) do
+    table.sort(candidates, function(a, b)
+      if a.recipe.energy ~= b.recipe.energy then
+        return a.recipe.energy < b.recipe.energy
+      end
+      return a.recipe.name < b.recipe.name
+    end)
+  end
+
+  return index
+end
+
+------------------------------------------------------------
 -- RECIPE FINDING
 ------------------------------------------------------------
 
@@ -106,6 +166,38 @@ function M.ensure_direct_barrelled_recipe(force, item_name)
   return recipe
 end
 
+function M.get_recipe_index(force)
+  if not (force and force.name) then
+    return nil
+  end
+
+  if type(storage.recipe_indexes) ~= "table" then
+    storage.recipe_indexes = {}
+  end
+
+  local key = force.name
+  local index = storage.recipe_indexes[key]
+
+  if not index then
+    index = M.build_recipe_index(force)
+    storage.recipe_indexes[key] = index
+  end
+
+  return index
+end
+
+function M.invalidate_recipe_index(force)
+  if type(storage.recipe_indexes) ~= "table" then
+    return
+  end
+
+  if force then
+    storage.recipe_indexes[force.name] = nil
+  else
+    storage.recipe_indexes = {}
+  end
+end
+
 function M.find_recipe_for_item(workshop, force, item_name)
   local best_recipe = nil
   local best_product_amount = nil
@@ -116,19 +208,40 @@ function M.find_recipe_for_item(workshop, force, item_name)
     return barrelled_recipe, barrelled_amount
   end
 
-  for _, recipe in pairs(force.recipes) do
-    local product_amount = M.recipe_can_make_item(workshop, recipe, item_name)
+  local index = M.get_recipe_index(force)
+  local candidates = index and index[item_name]
 
-    if product_amount then
-      if recipe.name == item_name then
-        return recipe, product_amount
+  if candidates then
+    for _, entry in ipairs(candidates) do
+      local product_amount = M.recipe_can_make_item(workshop, entry.recipe, item_name)
+      if product_amount then
+        if entry.recipe.name == item_name then
+          return entry.recipe, product_amount
+        end
+
+        if not best_recipe
+            or entry.recipe.energy < best_recipe.energy
+            or (entry.recipe.energy == best_recipe.energy and entry.recipe.name < best_recipe.name) then
+          best_recipe = entry.recipe
+          best_product_amount = product_amount
+        end
       end
+    end
+  else
+    for _, recipe in pairs(force.recipes) do
+      local product_amount = M.recipe_can_make_item(workshop, recipe, item_name)
 
-      if not best_recipe
-          or recipe.energy < best_recipe.energy
-          or (recipe.energy == best_recipe.energy and recipe.name < best_recipe.name) then
-        best_recipe = recipe
-        best_product_amount = product_amount
+      if product_amount then
+        if recipe.name == item_name then
+          return recipe, product_amount
+        end
+
+        if not best_recipe
+            or recipe.energy < best_recipe.energy
+            or (recipe.energy == best_recipe.energy and recipe.name < best_recipe.name) then
+          best_recipe = recipe
+          best_product_amount = product_amount
+        end
       end
     end
   end
