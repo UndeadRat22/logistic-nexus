@@ -49,7 +49,7 @@ end
 function M.fixed_product_amount(product)
   if product.amount
       and product.amount > 0
-      and not product.probability then
+      and (not product.probability or product.probability == 1) then
     return product.amount
   end
 
@@ -60,7 +60,7 @@ function M.fixed_ingredient_amount(ingredient)
   if ingredient
       and ingredient.amount
       and ingredient.amount > 0
-      and not ingredient.probability
+      and (not ingredient.probability or ingredient.probability == 1)
       and not ingredient.amount_min
       and not ingredient.amount_max then
     return ingredient.amount
