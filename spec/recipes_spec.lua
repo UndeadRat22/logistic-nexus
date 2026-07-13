@@ -293,4 +293,94 @@ describe("recipes", function()
       assert.is_nil(Recipes.recipe_can_make_item(workshop, recipe, "iron-plate"))
     end)
   end)
+
+  describe("cached_recipe_for_item", function()
+    local function make_workshop(categories)
+      return {
+        prototype = {
+          crafting_categories = categories or {crafting = true}
+        }
+      }
+    end
+
+    local function make_recipe(opts)
+      return {
+        name = opts.name or "iron-plate",
+        valid = opts.valid ~= false,
+        enabled = opts.enabled ~= false,
+        hidden = opts.hidden or false,
+        energy = opts.energy or 1,
+        products = opts.products or {{type = "item", name = "iron-plate", amount = 1}},
+        ingredients = opts.ingredients or {{type = "item", name = "iron-ore", amount = 1}},
+        has_category = function(cat)
+          local cats = opts.categories or {crafting = true}
+          return cats[cat] == true
+        end
+      }
+    end
+
+    local function make_force(recipes)
+      return {recipes = recipes or {}}
+    end
+
+    it("caches a found recipe", function()
+      local recipe = make_recipe({name = "iron-plate"})
+      local force = make_force({["iron-plate"] = recipe})
+      local workshop = make_workshop()
+      local brain = {recipe_choices = {}}
+
+      local found, amount = Recipes.cached_recipe_for_item(brain, workshop, force, "iron-plate")
+      assert.are.equal(recipe, found)
+      assert.are.equal(1, amount)
+      assert.are.equal("iron-plate", brain.recipe_choices["iron-plate"].recipe_name)
+    end)
+
+    it("returns nil for cached false entry", function()
+      local force = make_force({})
+      local workshop = make_workshop()
+      local brain = {recipe_choices = {["iron-plate"] = false}}
+
+      local found, amount = Recipes.cached_recipe_for_item(brain, workshop, force, "iron-plate")
+      assert.is_nil(found)
+      assert.is_nil(amount)
+    end)
+
+    it("invalidates cache when cached recipe becomes hidden", function()
+      local recipe = make_recipe({name = "iron-plate", hidden = false})
+      local force = make_force({["iron-plate"] = recipe})
+      local workshop = make_workshop()
+      local brain = {recipe_choices = {}}
+
+      -- Prime the cache.
+      local found1 = Recipes.cached_recipe_for_item(brain, workshop, force, "iron-plate")
+      assert.are.equal(recipe, found1)
+
+      -- The recipe is later hidden by a script/mod update.
+      recipe.hidden = true
+
+      -- Should detect the recipe is no longer available and recompute.
+      local found2, amount2 = Recipes.cached_recipe_for_item(brain, workshop, force, "iron-plate")
+      assert.is_nil(found2)
+      assert.is_nil(amount2)
+    end)
+
+    it("invalidates cache when workshop no longer supports recipe category", function()
+      local recipe = make_recipe({name = "iron-plate", categories = {advanced = true}})
+      local force = make_force({["iron-plate"] = recipe})
+      local workshop = make_workshop({advanced = true})
+      local brain = {recipe_choices = {}}
+
+      -- Prime the cache with a workshop that supports the recipe.
+      local found1 = Recipes.cached_recipe_for_item(brain, workshop, force, "iron-plate")
+      assert.are.equal(recipe, found1)
+
+      -- A different workshop (or prototype change) no longer supports the category.
+      local other_workshop = make_workshop({crafting = true})
+
+      -- Should recompute and find no valid recipe for this workshop.
+      local found2, amount2 = Recipes.cached_recipe_for_item(brain, other_workshop, force, "iron-plate")
+      assert.is_nil(found2)
+      assert.is_nil(amount2)
+    end)
+  end)
 end)
