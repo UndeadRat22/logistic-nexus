@@ -1,11 +1,11 @@
-# AG Mall TODO
+# Logistic Nexus TODO
 
 Known limitations and potential future features.
 
 ## Open
 
 ### 1. One final-product job per workshop at a time
-Each AG Mall workshop only handles a single final-product job. Consider allowing
+Each Logistic Nexus workshop only handles a single final-product job. Consider allowing
 multiple concurrent jobs or explicit job queueing.
 
 ### 2. No module / beacon / effect support
