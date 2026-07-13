@@ -133,4 +133,13 @@ describe("workshop entity prototype", function()
     local base = data.raw["assembling-machine"]["logistic-nexus-workshop"]
     assert.are.equal("logistic-nexus-workshop-mk2", base.next_upgrade)
   end)
+
+  it("shares fast_replaceable_group between tiers so next_upgrade is valid", function()
+    require("prototypes.entity")
+
+    local base = data.raw["assembling-machine"]["logistic-nexus-workshop"]
+    local mk2 = data.raw["assembling-machine"]["logistic-nexus-workshop-mk2"]
+    assert.are.equal("logistic-nexus-workshop", base.fast_replaceable_group)
+    assert.are.equal(base.fast_replaceable_group, mk2.fast_replaceable_group)
+  end)
 end)

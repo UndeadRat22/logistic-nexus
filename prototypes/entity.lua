@@ -15,7 +15,7 @@ workshop.minable = {
   mining_time = 0.3,
   result = "logistic-nexus-workshop"
 }
-workshop.fast_replaceable_group = nil
+workshop.fast_replaceable_group = "logistic-nexus-workshop"
 workshop.next_upgrade = nil
 workshop.allow_copy_paste = true
 workshop.crafting_speed = 1
@@ -68,6 +68,7 @@ workshop_mk2.minable = {
   mining_time = 0.3,
   result = "logistic-nexus-workshop-mk2"
 }
+workshop_mk2.fast_replaceable_group = "logistic-nexus-workshop"
 workshop_mk2.next_upgrade = nil
 workshop_mk2.allow_copy_paste = true
 workshop_mk2.crafting_speed = 2
