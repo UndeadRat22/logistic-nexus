@@ -4,10 +4,6 @@ Known limitations and potential future features.
 
 ## Open
 
-### 2. No module / beacon / effect support
-The workshop prototype sets `module_slots = 0` and `allowed_effects = {}`.
-Consider allowing modules to boost crafting speed or productivity.
-
 ### 3. Fixed crafting speed
 The workshop has `crafting_speed = 1` with no upgrade path. Consider tiered
 workshops or research-based speed upgrades.
@@ -30,6 +26,11 @@ MK2 workshop variants.
 Workshops now maintain a `job_queue` of up to `WORKSHOP_QUEUE_SIZE` final-product jobs.
 The brain assigns jobs to any workshop with queue space, and when a job finishes draining
 the next queued job starts immediately instead of waiting for the next assessment tick.
+
+### 2. No module / beacon / effect support
+The workshop prototype now has 4 module slots and allows all effects (consumption,
+speed, productivity, pollution). Factorio handles speed/productivity/beacon bonuses
+automatically for assembling-machine entities.
 
 ### 9. No production statistics or status GUI
 Added `/logistic-nexus-gui` which opens a status panel showing workshop summary,
