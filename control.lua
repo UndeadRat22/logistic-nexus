@@ -3552,6 +3552,46 @@ local function debug_mall_item(player, item_name)
             .. tostring(source_recipe.hidden)
             .. "."
       )
+      -- Diagnostic: why does recipe_can_make_item reject this recipe?
+      local workshop = workshop_data.entity
+      if workshop and workshop.valid then
+        local cats = workshop.prototype and workshop.prototype.crafting_categories
+        local cat_str = ""
+        if cats then
+          for k, v in pairs(cats) do
+            local c = type(k) == "string" and k or v
+            cat_str = cat_str .. tostring(c) .. " "
+          end
+        end
+        player.print("AG Mall debug: workshop crafting_categories: [" .. cat_str .. "]")
+        if source_recipe.valid then
+          local src_cats = source_recipe.categories or {}
+          local src_cat_str = ""
+          for _, c in pairs(src_cats) do
+            src_cat_str = src_cat_str .. tostring(c) .. " "
+          end
+          player.print("AG Mall debug: recipe categories: [" .. src_cat_str .. "]")
+          local has_cat = false
+          if cats then
+            for k, v in pairs(cats) do
+              local c = type(k) == "string" and k or v
+              if type(c) == "string" and source_recipe.has_category(c) then
+                has_cat = true
+                break
+              end
+            end
+          end
+          player.print("AG Mall debug: recipe_has_supported_category=" .. tostring(has_cat))
+          local pa = recipe_product_amount(source_recipe, item_name)
+          player.print("AG Mall debug: recipe_product_amount=" .. tostring(pa))
+          local ings = recipe_item_ingredients(source_recipe)
+          player.print("AG Mall debug: recipe_item_ingredients=" .. tostring(ings and #ings or "nil"))
+          player.print("AG Mall debug: recipe.products count=" .. tostring(#(source_recipe.products or {})))
+          for _, p in pairs(source_recipe.products or {}) do
+            player.print("AG Mall debug:   product: type=" .. tostring(p.type) .. " name=" .. tostring(p.name) .. " amount=" .. tostring(p.amount) .. " amount_min=" .. tostring(p.amount_min) .. " amount_max=" .. tostring(p.amount_max) .. " probability=" .. tostring(p.probability))
+          end
+        end
+      end
     end
     if barrelled_recipe then
       player.print(
@@ -3880,36 +3920,72 @@ local function rebuild_workshops()
   remove_unowned_companions()
 end
 
-function sync_barrelled_recipes()
-  storage.last_barrelled_recipe_sync = game.tick
+local function reset_force_recipe_effects(force)
+  if not force then
+    return
+  end
 
-  for _, force in pairs(game.forces) do
-    -- Reload recipe prototypes from data first, then reapply researched tech effects.
-    -- Doing this on every research event guarantees that newly-unlocked recipes
-    -- are actually available to the mall instead of getting stuck in a disabled state.
-    pcall(function()
-      force.reset_recipes()
-    end)
-    pcall(function()
-      force.reset_technology_effects()
-    end)
+  pcall(function()
+    force.reset_recipes()
+  end)
+  pcall(function()
+    force.reset_technology_effects()
+  end)
+end
 
-    for recipe_name, recipe in pairs(force.recipes) do
-      if type(recipe_name) == "string"
-          and string.sub(recipe_name, 1, #BARRELLED_RECIPE_PREFIX) == BARRELLED_RECIPE_PREFIX then
-        local source_name = string.sub(recipe_name, #BARRELLED_RECIPE_PREFIX + 1)
-        local source_recipe = force.recipes[source_name]
+local function invalidate_force_recipe_caches(force)
+  for _, brain in pairs(storage.brains or {}) do
+    if not force or brain.force_name == force.name then
+      brain.recipe_choices = {}
+      brain.raw_supply_counts = {}
+      brain.schedule_dirty = true
+      brain.next_schedule_tick = 0
+    end
+  end
+end
 
-        if source_recipe then
-          recipe.enabled = recipe.enabled or source_recipe.enabled
-        end
+local function sync_force_barrelled_recipes(force)
+  if not force then
+    return
+  end
+
+  for recipe_name, recipe in pairs(force.recipes) do
+    if type(recipe_name) == "string"
+        and string.sub(recipe_name, 1, #BARRELLED_RECIPE_PREFIX) == BARRELLED_RECIPE_PREFIX then
+      local source_name = string.sub(recipe_name, #BARRELLED_RECIPE_PREFIX + 1)
+      local source_recipe = force.recipes[source_name]
+
+      if source_recipe then
+        recipe.enabled = source_recipe.enabled
+      else
+        recipe.enabled = false
       end
     end
   end
+end
 
-  for _, brain in pairs(storage.brains or {}) do
-    brain.recipe_choices = {}
+function sync_barrelled_recipes(force, options)
+  options = options or {}
+  storage.last_barrelled_recipe_sync = game.tick
+  storage.barrelled_recipe_effects_reset = nil
+
+  if force then
+    if options.reset_force_effects then
+      reset_force_recipe_effects(force)
+    end
+    sync_force_barrelled_recipes(force)
+    invalidate_force_recipe_caches(force)
+    return
   end
+
+  for _, current_force in pairs(game.forces) do
+    if options.reset_force_effects then
+      reset_force_recipe_effects(current_force)
+    end
+    sync_force_barrelled_recipes(current_force)
+  end
+
+  invalidate_force_recipe_caches()
 end
 
 
@@ -3919,7 +3995,7 @@ end
 
 script.on_init(function()
   init_storage()
-  sync_barrelled_recipes()
+  sync_barrelled_recipes(nil, {reset_force_effects = true})
   rebuild_workshops()
 end)
 
@@ -3929,7 +4005,7 @@ script.on_configuration_changed(function()
   storage.construction_scan_queue = {}
   storage.construction_scan_queue_first = 1
   storage.construction_scan_queue_last = 0
-  sync_barrelled_recipes()
+  sync_barrelled_recipes(nil, {reset_force_effects = true})
   rebuild_workshops()
 end)
 
@@ -4007,13 +4083,19 @@ script.on_event(defines.events.on_entity_logistic_slot_changed, function(event)
   mark_network_schedule_dirty(point and point.logistic_network)
 end)
 
-script.on_event(defines.events.on_research_finished, function()
-  sync_barrelled_recipes()
+script.on_event(defines.events.on_research_finished, function(event)
+  sync_barrelled_recipes(event.research and event.research.force)
 end)
 
 if defines.events.on_research_reversed then
-  script.on_event(defines.events.on_research_reversed, function()
-    sync_barrelled_recipes()
+  script.on_event(defines.events.on_research_reversed, function(event)
+    sync_barrelled_recipes(event.research and event.research.force)
+  end)
+end
+
+if defines.events.on_technology_effects_reset then
+  script.on_event(defines.events.on_technology_effects_reset, function(event)
+    sync_barrelled_recipes(event.force)
   end)
 end
 
