@@ -22,20 +22,10 @@ function M.insert_into_output_containers(workshop_data, item)
   end
 
   local provider = workshop_data.companions and workshop_data.companions.provider
-  local requester = workshop_data.companions and workshop_data.companions.requester
   local remaining = Util.stack_definition(item.name, item.count, item.quality)
 
   if provider and provider.valid then
     local inserted = provider.insert(remaining)
-    remaining.count = remaining.count - inserted
-  end
-
-  if remaining.count <= 0 then
-    return nil
-  end
-
-  if requester and requester.valid then
-    local inserted = requester.insert(remaining)
     remaining.count = remaining.count - inserted
   end
 
