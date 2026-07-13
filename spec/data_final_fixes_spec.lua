@@ -176,4 +176,51 @@ describe("data-final-fixes category collection", function()
     assert.is_false(has_category(workshop, "pressing"))
     assert.is_false(has_category(mk2, "pressing"))
   end)
+
+  it("collects alternate recipe categories", function()
+    data.raw.recipe["transport-belt"].category = "crafting"
+    data.raw.recipe["transport-belt"].categories = {"crafting", "pressing"}
+
+    require("prototypes.entity")
+    require("data-final-fixes")
+
+    local workshop = data.raw["assembling-machine"]["logistic-nexus-workshop"]
+
+    local function has_category(entity, category)
+      for _, c in pairs(entity.crafting_categories or {}) do
+        if c == category then
+          return true
+        end
+      end
+      return false
+    end
+
+    assert.is_true(has_category(workshop, "pressing"))
+  end)
+
+  it("inherits categories updated on the base assembling machine", function()
+    -- Simulate Space Age updating assembling-machine-3 after our prototype was copied.
+    data.raw["assembling-machine"]["assembling-machine-3"].crafting_categories = {
+      "crafting",
+      "pressing",
+      "metallurgy"
+    }
+
+    require("prototypes.entity")
+    require("data-final-fixes")
+
+    local workshop = data.raw["assembling-machine"]["logistic-nexus-workshop"]
+
+    local function has_category(entity, category)
+      for _, c in pairs(entity.crafting_categories or {}) do
+        if c == category then
+          return true
+        end
+      end
+      return false
+    end
+
+    assert.is_true(has_category(workshop, "pressing"))
+    assert.is_true(has_category(workshop, "metallurgy"))
+  end)
 end)

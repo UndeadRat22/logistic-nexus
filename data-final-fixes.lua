@@ -282,6 +282,16 @@ end
 -- Ensure the Logistic Nexus workshop can craft recipes from mod-added categories.
 -- Categories are collected from every recipe so item-only mod recipes are
 -- supported without requiring mod authors to patch the workshop prototype.
+local function collect_categories(source, excluded_categories, categories)
+  if type(source) == "string" and source ~= "" and not excluded_categories[source] then
+    categories[source] = true
+  elseif type(source) == "table" then
+    for _, category in pairs(source) do
+      collect_categories(category, excluded_categories, categories)
+    end
+  end
+end
+
 local function apply_category_collection(entity_name)
   local workshop = data.raw["assembling-machine"][entity_name]
   if not workshop then
@@ -294,17 +304,21 @@ local function apply_category_collection(entity_name)
       and settings.startup["logistic-nexus-excluded-categories"].value
   local excluded_categories = DataStageUtil.parse_excluded_categories(setting_value)
   local categories = {}
-  for _, category in pairs(workshop.crafting_categories or {}) do
-    if type(category) == "string" and not excluded_categories[category] then
-      categories[category] = true
-    end
-  end
+
+  -- Keep categories already assigned to the workshop.
+  collect_categories(workshop.crafting_categories, excluded_categories, categories)
+
+  -- Collect primary and alternate categories from every recipe.
   for _, recipe in pairs(data.raw.recipe) do
-    local category = recipe.category or "crafting"
-    if type(category) == "string" and not excluded_categories[category] then
-      categories[category] = true
-    end
+    collect_categories(recipe.category or "crafting", excluded_categories, categories)
+    collect_categories(recipe.categories, excluded_categories, categories)
   end
+
+  -- Inherit categories from the base assembling machine, which Space Age and
+  -- other mods may update in data-updates after our prototype was deep-copied.
+  local base_machine = data.raw["assembling-machine"]["assembling-machine-3"]
+  collect_categories(base_machine and base_machine.crafting_categories, excluded_categories, categories)
+
   local category_list = {}
   for category in pairs(categories) do
     table.insert(category_list, category)
