@@ -17,7 +17,7 @@ workshop.minable = {
 }
 workshop.fast_replaceable_group = nil
 workshop.next_upgrade = nil
-workshop.allow_copy_paste = false
+workshop.allow_copy_paste = true
 workshop.crafting_speed = 1
 workshop.module_slots = 4
 workshop.allowed_effects = {"consumption", "speed", "productivity", "pollution"}
@@ -69,6 +69,7 @@ workshop_mk2.minable = {
   result = "logistic-nexus-workshop-mk2"
 }
 workshop_mk2.next_upgrade = nil
+workshop_mk2.allow_copy_paste = true
 workshop_mk2.crafting_speed = 2
 workshop_mk2.module_slots = 6
 workshop_mk2.energy_usage = "1500kW"

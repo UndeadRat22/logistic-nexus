@@ -8,10 +8,6 @@ Known limitations and potential future features.
 Blocked items are only visible through the entity status icon. Consider
 flying-text alerts or console messages when a requested item is uncraftable.
 
-### 11. No blueprint copy-paste support
-The workshop prototype sets `allow_copy_paste = false`. Consider enabling
-blueprint copy-paste, at least for circuit conditions.
-
 ## Done
 
 ### 1. One final-product job per workshop at a time
@@ -26,6 +22,11 @@ automatically for assembling-machine entities.
 
 ### 3. Fixed crafting speed
 Addressed by the MK2 workshop tier (see item #12).
+
+### 11. No blueprint copy-paste support
+Both workshop tiers now set `allow_copy_paste = true`, so blueprints include
+the workshop and preserve circuit-wire connections. Companion entities remain
+`not-blueprintable` and are recreated automatically when the workshop is built.
 
 ### 12. No workshop upgrade tiers
 Added `logistic-nexus-workshop-mk2` with `crafting_speed = 2`, 6 module slots,

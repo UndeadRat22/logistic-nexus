@@ -108,12 +108,16 @@ describe("workshop entity prototype", function()
     assert.are.same({"consumption", "speed", "productivity", "pollution"}, workshop.allowed_effects)
   end)
 
-  it("keeps allow_copy_paste disabled for now", function()
+  it("allows blueprint copy-paste", function()
     require("prototypes.entity")
 
     local workshop = data.raw["assembling-machine"]["logistic-nexus-workshop"]
     assert.is_not_nil(workshop)
-    assert.is_false(workshop.allow_copy_paste)
+    assert.is_true(workshop.allow_copy_paste)
+
+    local mk2 = data.raw["assembling-machine"]["logistic-nexus-workshop-mk2"]
+    assert.is_not_nil(mk2)
+    assert.is_true(mk2.allow_copy_paste)
   end)
 
   it("creates an MK2 tier with faster speed and more module slots", function()
