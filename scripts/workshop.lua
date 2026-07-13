@@ -865,10 +865,13 @@ function M.tick_workshop_worker(workshop_data, brain)
 
       local next_job = workshop_data.job_queue and workshop_data.job_queue[1]
       if next_job then
-        table.remove(workshop_data.job_queue, 1)
         if M.start_job_now(workshop_data, next_job) then
+          table.remove(workshop_data.job_queue, 1)
           return "busy"
         end
+
+        Status.set_blocked_status(workshop)
+        return "busy"
       end
 
       Status.set_idle_status(workshop)

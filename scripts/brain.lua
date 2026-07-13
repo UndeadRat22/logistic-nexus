@@ -340,7 +340,15 @@ function M.process_brain(brain)
   end
 
   local target_metrics = {}
-  local alert_workshop = idle[1]
+  local alert_workshop
+  for _, unit_number in pairs(brain.workshops or {}) do
+    local workshop_data = storage.workshops[unit_number]
+    if workshop_data and workshop_data.entity and workshop_data.entity.valid then
+      alert_workshop = workshop_data
+      break
+    end
+  end
+
   for index, shortage in ipairs(shortages) do
     local candidate = candidates_by_key[Util.item_key(shortage.name, shortage.quality)]
     local blocked = candidate and candidate.blocked_reason
