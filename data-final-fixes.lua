@@ -282,8 +282,12 @@ end
 -- Ensure the Logistic Nexus workshop can craft recipes from mod-added categories.
 -- Categories are collected from every recipe so item-only mod recipes are
 -- supported without requiring mod authors to patch the workshop prototype.
-local workshop = data.raw["assembling-machine"]["logistic-nexus-workshop"]
-if workshop then
+local function apply_category_collection(entity_name)
+  local workshop = data.raw["assembling-machine"][entity_name]
+  if not workshop then
+    return
+  end
+
   local setting_value = settings
       and settings.startup
       and settings.startup["logistic-nexus-excluded-categories"]
@@ -307,3 +311,6 @@ if workshop then
   end
   workshop.crafting_categories = category_list
 end
+
+apply_category_collection("logistic-nexus-workshop")
+apply_category_collection("logistic-nexus-workshop-mk2")
