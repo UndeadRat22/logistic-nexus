@@ -120,6 +120,141 @@ describe("construction", function()
     end)
   end)
 
+  describe("collect_shortages", function()
+    local function make_requester_point(filters, owner_contents)
+      local call_count = 0
+      local owner = {
+        valid = true,
+        type = "logistic-container",
+        get_inventory = function()
+          call_count = call_count + 1
+          return {
+            valid = true,
+            get_item_count = function(item)
+              if type(item) == "table" then
+                local key = item.name .. "|" .. (item.quality or "normal")
+                return owner_contents[key] or 0
+              end
+              return owner_contents[item .. "|normal"] or 0
+            end,
+            get_contents = function()
+              local result = {}
+              for key, count in pairs(owner_contents) do
+                local name, quality = key:match("^(.*)|([^|]+)$")
+                table.insert(result, {name = name, count = count, quality = quality})
+              end
+              return result
+            end,
+            is_empty = function() return false end
+          }
+        end
+      }
+      return {
+        valid = true,
+        enabled = true,
+        owner = owner,
+        filters = filters,
+        targeted_items_deliver = {},
+        _get_inventory_call_count = function() return call_count end
+      }
+    end
+
+    local function make_network(points)
+      return {
+        valid = true,
+        network_id = 1,
+        force = {name = "player"},
+        requester_points = points or {},
+        cells = {}
+      }
+    end
+
+    it("collects shortages from requester points", function()
+      local point = make_requester_point(
+        {{name = "iron-plate", quality = "normal", count = 10}},
+        {["iron-plate|normal"] = 3}
+      )
+      local network = make_network({point})
+      game.tick = 0
+
+      local shortages, count = Construction.collect_shortages(network, nil)
+
+      assert.are.equal(1, #shortages)
+      assert.are.equal("iron-plate", shortages[1].name)
+      assert.are.equal(7, shortages[1].missing)
+      assert.are.equal(3, shortages[1].contents)
+      assert.are.equal(10, shortages[1].target)
+    end)
+
+    it("skips satisfied requests", function()
+      local point = make_requester_point(
+        {{name = "iron-plate", quality = "normal", count = 5}},
+        {["iron-plate|normal"] = 10}
+      )
+      local network = make_network({point})
+      game.tick = 0
+
+      local shortages = Construction.collect_shortages(network, nil)
+      assert.are.equal(0, #shortages)
+    end)
+
+    it("aggregates duplicate filters within a point", function()
+      local point = make_requester_point(
+        {
+          {name = "iron-plate", quality = "normal", count = 5},
+          {name = "iron-plate", quality = "normal", count = 3}
+        },
+        {["iron-plate|normal"] = 2}
+      )
+      local network = make_network({point})
+      game.tick = 0
+
+      local shortages = Construction.collect_shortages(network, nil)
+      assert.are.equal(1, #shortages)
+      assert.are.equal(8, shortages[1].target)
+      assert.are.equal(6, shortages[1].missing)
+    end)
+
+    it("handles multiple points requesting different items", function()
+      local point_a = make_requester_point(
+        {{name = "iron-plate", quality = "normal", count = 10}},
+        {["iron-plate|normal"] = 0}
+      )
+      local point_b = make_requester_point(
+        {{name = "copper-plate", quality = "normal", count = 5}},
+        {["copper-plate|normal"] = 0}
+      )
+      local network = make_network({point_a, point_b})
+      game.tick = 0
+
+      local shortages = Construction.collect_shortages(network, nil)
+      assert.are.equal(2, #shortages)
+    end)
+
+    it("calls get_inventory once per requester point, not once per filter", function()
+      local point = make_requester_point(
+        {
+          {name = "iron-plate", quality = "normal", count = 10},
+          {name = "copper-plate", quality = "normal", count = 5},
+          {name = "steel-plate", quality = "normal", count = 2}
+        },
+        {
+          ["iron-plate|normal"] = 0,
+          ["copper-plate|normal"] = 0,
+          ["steel-plate|normal"] = 0
+        }
+      )
+      local network = make_network({point})
+      game.tick = 0
+
+      Construction.collect_shortages(network, nil)
+
+      -- With the get_contents() optimization, get_inventory should be called
+      -- exactly once per requester point, not once per filter.
+      assert.are.equal(1, point._get_inventory_call_count())
+    end)
+  end)
+
   describe("add_ghost_request", function()
     local network = {network_id = 1, valid = true, force = {name = "player"}}
 

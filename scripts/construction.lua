@@ -768,6 +768,7 @@ function M.collect_shortages(network, brain)
         and point.enabled ~= false
         and not Network.is_internal_requester_owner(point.owner) then
       local point_requested = {}
+      local owner_contents = Network.get_requester_owner_contents(point.owner)
 
       for _, filter in pairs(point.filters or {}) do
         local name = filter.name
@@ -795,7 +796,8 @@ function M.collect_shortages(network, brain)
       end
 
       for _, entry in pairs(point_requested) do
-        local contents = Network.get_requester_owner_item_count(point.owner, entry.name, entry.quality)
+        local key = Util.item_key(entry.name, entry.quality)
+        local contents = owner_contents[key] or 0
         local incoming = Network.targeted_delivery_count(point, entry.name, entry.quality)
         local unsatisfied = entry.requested - contents - incoming
 

@@ -103,27 +103,52 @@ function M.get_item_count_from_inventory(owner, inventory_index, item)
   return inventory.get_item_count(item) or 0
 end
 
+function M.get_requester_owner_inventory_index(owner)
+  if owner.type == "character" then
+    return defines.inventory.character_main
+  elseif owner.type == "spider-vehicle" then
+    return defines.inventory.spider_trunk
+  elseif owner.type == "car" then
+    return defines.inventory.car_trunk
+  elseif owner.type == "cargo-wagon" then
+    return defines.inventory.cargo_wagon
+  elseif owner.type == "space-platform-hub" then
+    return defines.inventory.hub_main
+  elseif owner.type == "cargo-landing-pad" then
+    return defines.inventory.cargo_landing_pad_main
+  else
+    return defines.inventory.chest
+  end
+end
+
 function M.get_requester_owner_item_count(owner, name, quality)
   local item = Util.item_id(name, quality)
-  local inventory_index
+  local inventory_index = M.get_requester_owner_inventory_index(owner)
+  return M.get_item_count_from_inventory(owner, inventory_index, item)
+end
 
-  if owner.type == "character" then
-    inventory_index = defines.inventory.character_main
-  elseif owner.type == "spider-vehicle" then
-    inventory_index = defines.inventory.spider_trunk
-  elseif owner.type == "car" then
-    inventory_index = defines.inventory.car_trunk
-  elseif owner.type == "cargo-wagon" then
-    inventory_index = defines.inventory.cargo_wagon
-  elseif owner.type == "space-platform-hub" then
-    inventory_index = defines.inventory.hub_main
-  elseif owner.type == "cargo-landing-pad" then
-    inventory_index = defines.inventory.cargo_landing_pad_main
-  else
-    inventory_index = defines.inventory.chest
+function M.get_requester_owner_contents(owner)
+  local contents = {}
+  if not (owner and owner.valid) then
+    return contents
   end
 
-  return M.get_item_count_from_inventory(owner, inventory_index, item)
+  local inventory_index = M.get_requester_owner_inventory_index(owner)
+  local ok, inventory = pcall(function()
+    return owner.get_inventory(inventory_index)
+  end)
+
+  if not (ok and inventory and inventory.valid) then
+    return contents
+  end
+
+  for _, item in pairs(inventory.get_contents() or {}) do
+    local quality = Util.quality_name(item.quality)
+    local key = Util.item_key(item.name, quality)
+    contents[key] = (contents[key] or 0) + (item.count or 0)
+  end
+
+  return contents
 end
 
 ------------------------------------------------------------
