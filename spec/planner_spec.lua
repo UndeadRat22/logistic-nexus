@@ -150,4 +150,100 @@ describe("planner", function()
       assert.is_true(trace_str:find("Craft using iron%-plate") ~= nil)
     end)
   end)
+
+  describe("build_internal_craft_plan batching", function()
+    it("scales requests and output with max_batches when supply is available", function()
+      local recipes = {
+        ["iron-plate"] = make_recipe({
+          name = "iron-plate",
+          ingredients = {{type = "item", name = "iron-ore", amount = 2}}
+        })
+      }
+      network_available = {["iron-ore"] = 100}
+
+      local plan = Planner.build_internal_craft_plan(
+        make_workshop(),
+        make_network(recipes),
+        "iron-plate",
+        "normal",
+        {recipe_choices = {}, raw_supply_counts = {}},
+        {max_batches = 5}
+      )
+
+      assert.is_not_nil(plan)
+      assert.are.equal(5, plan.target_output_amount)
+      assert.are.equal(1, #plan.requests)
+      assert.are.equal("iron-ore", plan.requests[1].name)
+      assert.are.equal(10, plan.requests[1].amount)
+    end)
+
+    it("falls back to fewer batches when supply is limited", function()
+      local recipes = {
+        ["iron-plate"] = make_recipe({
+          name = "iron-plate",
+          ingredients = {{type = "item", name = "iron-ore", amount = 2}}
+        })
+      }
+      network_available = {["iron-ore"] = 6}
+
+      local plan = Planner.build_internal_craft_plan(
+        make_workshop(),
+        make_network(recipes),
+        "iron-plate",
+        "normal",
+        {recipe_choices = {}, raw_supply_counts = {}},
+        {max_batches = 5}
+      )
+
+      assert.is_not_nil(plan)
+      assert.are.equal(3, plan.target_output_amount)
+      assert.are.equal(6, plan.requests[1].amount)
+    end)
+
+    it("returns nil when even one batch is infeasible", function()
+      local recipes = {
+        ["iron-plate"] = make_recipe({
+          name = "iron-plate",
+          ingredients = {{type = "item", name = "iron-ore", amount = 2}}
+        })
+      }
+      network_available = {}
+
+      local plan, blocked = Planner.build_internal_craft_plan(
+        make_workshop(),
+        make_network(recipes),
+        "iron-plate",
+        "normal",
+        {recipe_choices = {}, raw_supply_counts = {}},
+        {max_batches = 5}
+      )
+
+      assert.is_nil(plan)
+      assert.are.equal("missing-leaf", blocked.reason)
+      assert.are.equal("iron-ore", blocked.item)
+    end)
+
+    it("matches single-batch output when max_batches is 1", function()
+      local recipes = {
+        ["iron-plate"] = make_recipe({
+          name = "iron-plate",
+          ingredients = {{type = "item", name = "iron-ore", amount = 2}}
+        })
+      }
+      network_available = {["iron-ore"] = 100}
+
+      local plan = Planner.build_internal_craft_plan(
+        make_workshop(),
+        make_network(recipes),
+        "iron-plate",
+        "normal",
+        {recipe_choices = {}, raw_supply_counts = {}},
+        {max_batches = 1}
+      )
+
+      assert.is_not_nil(plan)
+      assert.are.equal(1, plan.target_output_amount)
+      assert.are.equal(2, plan.requests[1].amount)
+    end)
+  end)
 end)

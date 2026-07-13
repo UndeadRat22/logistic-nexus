@@ -156,6 +156,17 @@ function M.choose_independent_job(brain, workshop_data, network, candidates, sup
   local skipped = {}
   local controls = Workshop.read_workshop_circuit_controls(workshop_data.entity)
 
+  local setting_batches = 1
+  local batch_setting = settings
+      and settings.global
+      and settings.global["logistic-nexus-max-batches-per-job"]
+  if batch_setting and type(batch_setting.value) == "number" then
+    setting_batches = math.floor(batch_setting.value)
+  end
+  if setting_batches < 1 then
+    setting_batches = 1
+  end
+
   while true do
     local window = {}
 
@@ -176,12 +187,18 @@ function M.choose_independent_job(brain, workshop_data, network, candidates, sup
 
     table.sort(window, M.candidate_choice_sort)
     local candidate = window[1]
+    local product_amount = candidate.product_amount or 1
+    local max_batches = math.min(
+      setting_batches,
+      math.ceil(candidate.remaining_units / product_amount)
+    )
     local plan, blocked = Planner.build_candidate_plan(
       brain,
       workshop_data,
       network,
       candidate,
-      supply_budget
+      supply_budget,
+      max_batches
     )
 
     if plan then

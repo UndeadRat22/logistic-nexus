@@ -11,17 +11,15 @@ local M = {}
 -- INTERNAL CRAFT PLAN
 ------------------------------------------------------------
 
-function M.build_internal_craft_plan(
-    workshop,
-    network,
-    target_name,
-    quality,
-    brain,
-    options
-  )
-  quality = Util.quality_name(quality)
-  options = options or {}
-
+local function build_plan_for_batches(
+  workshop,
+  network,
+  target_name,
+  quality,
+  brain,
+  options,
+  batch_count
+)
   local trace = options.trace
   local function log_trace(level, message)
     if not trace then
@@ -50,7 +48,7 @@ function M.build_internal_craft_plan(
       .. " (category: " .. tostring(recipe.category)
       .. ", produces: " .. tostring(product_amount) .. ")")
 
-  local root_ingredients = Recipes.aggregate_recipe_ingredients(recipe, 1, quality)
+  local root_ingredients = Recipes.aggregate_recipe_ingredients(recipe, batch_count, quality)
   local root_outputs = Recipes.recipe_outputs(recipe, quality)
   if not (root_ingredients and root_outputs) then
     log_trace(0, "BLOCKED: recipe " .. recipe.name .. " has unsupported ingredients/products")
@@ -276,18 +274,79 @@ function M.build_internal_craft_plan(
     recipe_name = recipe.name,
     ingredients = root_ingredients,
     outputs = root_outputs,
-    product_amount = product_amount
+    product_amount = product_amount * batch_count
   })
 
   return {
     target_item = target_name,
     target_quality = quality,
     target_recipe = recipe.name,
-    target_output_amount = product_amount or 1,
+    target_output_amount = (product_amount or 1) * batch_count,
     requests = Util.counts_to_ingredients(requests),
     network_used = network_used,
     steps = steps
   }, nil
+end
+
+function M.build_internal_craft_plan(
+    workshop,
+    network,
+    target_name,
+    quality,
+    brain,
+    options
+  )
+  quality = Util.quality_name(quality)
+  options = options or {}
+
+  local max_batches = options.max_batches or 1
+  if max_batches < 1 then
+    max_batches = 1
+  end
+
+  local one_batch_plan, one_batch_blocked = build_plan_for_batches(
+    workshop,
+    network,
+    target_name,
+    quality,
+    brain,
+    options,
+    1
+  )
+
+  if not one_batch_plan then
+    return nil, one_batch_blocked
+  end
+
+  if max_batches == 1 then
+    return one_batch_plan, nil
+  end
+
+  local best_plan = one_batch_plan
+  local low = 1
+  local high = max_batches
+
+  while low <= high do
+    local mid = math.floor((low + high) / 2)
+    local plan, _ = build_plan_for_batches(
+      workshop,
+      network,
+      target_name,
+      quality,
+      brain,
+      options,
+      mid
+    )
+
+    if plan then
+      best_plan = plan
+      low = mid + 1
+    else
+      high = mid - 1
+    end
+  end
+
+  return best_plan, nil
 end
 
 ------------------------------------------------------------
@@ -315,7 +374,7 @@ function M.apply_supply_use(supply_budget, network_used)
   end
 end
 
-function M.build_candidate_plan(brain, workshop_data, network, candidate, supply_budget)
+function M.build_candidate_plan(brain, workshop_data, network, candidate, supply_budget, max_batches)
   local requester = workshop_data.companions and workshop_data.companions.requester
   local plan, blocked = M.build_internal_craft_plan(
     workshop_data.entity,
@@ -325,7 +384,8 @@ function M.build_candidate_plan(brain, workshop_data, network, candidate, supply
     brain,
     {
       local_counts = Network.requester_planning_counts(requester, true),
-      supply_budget = supply_budget
+      supply_budget = supply_budget,
+      max_batches = max_batches
     }
   )
 
