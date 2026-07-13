@@ -105,4 +105,30 @@ describe("brain", function()
       assert.are.same({}, outputs)
     end)
   end)
+
+  describe("clear_stale_recipe_cache", function()
+    it("removes negative cache entries while keeping positive ones", function()
+      local cached_recipe = {recipe_name = "iron-plate", product_amount = 1}
+      local brain = {
+        recipe_choices = {
+          ["iron-plate"] = cached_recipe,
+          ["copper-plate"] = false,
+          ["steel-plate"] = false
+        }
+      }
+
+      Brain.clear_stale_recipe_cache(brain)
+
+      assert.are.equal(cached_recipe, brain.recipe_choices["iron-plate"])
+      assert.is_nil(brain.recipe_choices["copper-plate"])
+      assert.is_nil(brain.recipe_choices["steel-plate"])
+    end)
+
+    it("handles missing recipe_choices", function()
+      local brain = {}
+      assert.has_no.errors(function()
+        Brain.clear_stale_recipe_cache(brain)
+      end)
+    end)
+  end)
 end)

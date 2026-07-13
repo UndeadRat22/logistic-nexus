@@ -49,6 +49,14 @@ function M.reset_brain_runtime(brain)
   brain.raw_supply_counts = {}
 end
 
+function M.clear_stale_recipe_cache(brain)
+  for item_name, choice in pairs(brain.recipe_choices or {}) do
+    if choice == false then
+      brain.recipe_choices[item_name] = nil
+    end
+  end
+end
+
 ------------------------------------------------------------
 -- ACTIVE ASSIGNMENT COLLECTION
 ------------------------------------------------------------
@@ -268,6 +276,9 @@ function M.process_brain(brain)
   brain.schedule_dirty = false
   brain.next_schedule_tick = game.tick + C.IDLE_RESCAN_INTERVAL
   brain.raw_supply_counts = {}
+  -- Clear negative recipe cache entries so recipes enabled by scripts/mods
+  -- since the last assessment can be discovered.
+  M.clear_stale_recipe_cache(brain)
   local shortages, metrics = Construction.collect_prioritized_shortages(network, brain)
   brain.metrics = metrics
   local representative = idle[1]
