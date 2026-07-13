@@ -334,6 +334,44 @@ end
 -- RECIPE / JOB MANAGEMENT
 ------------------------------------------------------------
 
+local function is_module_item(item)
+  local proto = prototypes.item[item.name]
+  return proto and proto.type == "module"
+end
+
+local function insert_modules_into_workshop(workshop, items)
+  if not (workshop and workshop.valid and workshop.get_inventory) then
+    return items
+  end
+
+  local ok, module_inventory = pcall(function()
+    return workshop.get_inventory(defines.inventory.assembling_machine_modules)
+  end)
+
+  if not ok or not (module_inventory and module_inventory.valid) then
+    return items
+  end
+
+  local leftovers = {}
+  for _, item in pairs(items or {}) do
+    if is_module_item(item) then
+      local inserted = module_inventory:insert({
+        name = item.name,
+        count = item.count or 1,
+        quality = item.quality or "normal"
+      })
+      if inserted < (item.count or 1) then
+        item.count = (item.count or 1) - inserted
+        table.insert(leftovers, item)
+      end
+    else
+      table.insert(leftovers, item)
+    end
+  end
+
+  return leftovers
+end
+
 function M.set_workshop_recipe(workshop_data, recipe, quality)
   local workshop = workshop_data.entity
   if not (workshop and workshop.valid) then
@@ -354,7 +392,8 @@ function M.set_workshop_recipe(workshop_data, recipe, quality)
   end)
 
   if ok then
-    M.insert_returned_items(workshop_data, returned_items)
+    local non_modules = insert_modules_into_workshop(workshop, returned_items)
+    M.insert_returned_items(workshop_data, non_modules)
     workshop_data.current_recipe = recipe and recipe.name or nil
     workshop_data.current_recipe_quality = recipe and quality or nil
     return true

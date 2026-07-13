@@ -283,6 +283,69 @@ describe("workshop job queueing", function()
     end)
   end)
 
+  describe("set_workshop_recipe", function()
+    before_each(function()
+      _G.prototypes = {
+        item = {
+          ["productivity-module"] = {type = "module"},
+          ["iron-plate"] = {type = "item"}
+        }
+      }
+    end)
+
+    it("returns returned modules to the module inventory instead of output chest", function()
+      local module_inventory = {
+        valid = true,
+        inserted = {},
+        insert = function(self, stack)
+          table.insert(self.inserted, stack)
+          return stack.count
+        end
+      }
+
+      local output_inserted = {}
+      local entity = make_entity()
+      entity.get_inventory = function(inv)
+        if inv == defines.inventory.assembling_machine_modules then
+          return module_inventory
+        end
+        return nil
+      end
+      entity.set_recipe = function()
+        return {
+          {name = "productivity-module", count = 2, quality = "normal"},
+          {name = "iron-plate", count = 5, quality = "normal"}
+        }
+      end
+      entity.insert = function() return 0 end
+
+      local provider = make_provider()
+      provider.insert = function(stack)
+        table.insert(output_inserted, {
+          name = stack.name,
+          count = stack.count,
+          quality = stack.quality
+        })
+        return stack.count
+      end
+
+      local workshop_data = make_workshop_data({
+        entity = entity,
+        companions = {provider = provider}
+      })
+
+      local ok = Workshop.set_workshop_recipe(workshop_data, {name = "gear"}, "normal")
+
+      assert.is_true(ok)
+      assert.are.equal(1, #module_inventory.inserted)
+      assert.are.equal("productivity-module", module_inventory.inserted[1].name)
+      assert.are.equal(2, module_inventory.inserted[1].count)
+      assert.are.equal(1, #output_inserted)
+      assert.are.equal("iron-plate", output_inserted[1].name)
+      assert.are.equal(5, output_inserted[1].count)
+    end)
+  end)
+
   describe("tick_workshop_worker queue drain", function()
     it("starts the next queued job when draining completes", function()
       local entity = make_entity()

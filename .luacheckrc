@@ -23,6 +23,7 @@ stds.factorio_control = {
     "defines",
     "game",
     "log",
+    "prototypes",
     "rendering",
     "script",
     "settings",
