@@ -216,6 +216,7 @@ function M.register_events()
   end
 
   script.on_event(defines.events.on_tick, M.on_tick)
+  script.on_nth_tick(C.ASSESS_INTERVAL, Brain.assess_all_workshops)
 
   script.on_event(defines.events.on_entity_logistic_slot_changed, M.on_entity_logistic_slot_changed)
 
