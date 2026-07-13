@@ -65,7 +65,7 @@ local function make_base_inserter(name)
   }
 end
 
-local function reset_data()
+local function reset_data(modules_enabled)
   _G.data = {
     raw = {
       ["assembling-machine"] = {
@@ -91,6 +91,11 @@ local function reset_data()
       end
     end
   }
+  _G.settings = {
+    startup = {
+      ["logistic-nexus-enable-modules"] = {value = modules_enabled == true}
+    }
+  }
 end
 
 describe("workshop entity prototype", function()
@@ -99,13 +104,26 @@ describe("workshop entity prototype", function()
     package.loaded["prototypes.entity"] = nil
   end)
 
-  it("enables module slots and effects", function()
+  it("enables module slots and effects when setting is on", function()
+    reset_data(true)
+    package.loaded["prototypes.entity"] = nil
     require("prototypes.entity")
 
     local workshop = data.raw["assembling-machine"]["logistic-nexus-workshop"]
     assert.is_not_nil(workshop)
     assert.are.equal(4, workshop.module_slots)
     assert.are.same({"consumption", "speed", "productivity", "pollution"}, workshop.allowed_effects)
+  end)
+
+  it("disables module slots by default", function()
+    reset_data(false)
+    package.loaded["prototypes.entity"] = nil
+    require("prototypes.entity")
+
+    local workshop = data.raw["assembling-machine"]["logistic-nexus-workshop"]
+    assert.is_not_nil(workshop)
+    assert.are.equal(0, workshop.module_slots)
+    assert.are.same({}, workshop.allowed_effects)
   end)
 
   it("allows blueprint copy-paste", function()
@@ -121,6 +139,8 @@ describe("workshop entity prototype", function()
   end)
 
   it("creates an MK2 tier with faster speed and more module slots", function()
+    reset_data(true)
+    package.loaded["prototypes.entity"] = nil
     require("prototypes.entity")
 
     local mk2 = data.raw["assembling-machine"]["logistic-nexus-workshop-mk2"]

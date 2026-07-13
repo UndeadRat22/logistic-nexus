@@ -19,9 +19,21 @@ workshop.fast_replaceable_group = "logistic-nexus-workshop"
 workshop.next_upgrade = nil
 workshop.allow_copy_paste = true
 workshop.crafting_speed = 1
-workshop.module_slots = 4
-workshop.allowed_effects = {"consumption", "speed", "productivity", "pollution"}
 workshop.energy_usage = "750kW"
+
+-- Module support is experimental. Disable slots by default until the GUI/click
+-- interactions are fully reliable in Factorio 2.0.
+local modules_enabled = settings
+    and settings.startup
+    and settings.startup["logistic-nexus-enable-modules"]
+    and settings.startup["logistic-nexus-enable-modules"].value
+if modules_enabled then
+  workshop.module_slots = 4
+  workshop.allowed_effects = {"consumption", "speed", "productivity", "pollution"}
+else
+  workshop.module_slots = 0
+  workshop.allowed_effects = {}
+end
 workshop.fluid_boxes = nil
 workshop.fluid_boxes_off_when_no_fluid_recipe = nil
 workshop.show_recipe_icon = false
@@ -74,8 +86,14 @@ workshop_mk2.fast_replaceable_group = "logistic-nexus-workshop"
 workshop_mk2.next_upgrade = nil
 workshop_mk2.allow_copy_paste = true
 workshop_mk2.crafting_speed = 2
-workshop_mk2.module_slots = 6
 workshop_mk2.energy_usage = "1500kW"
+if modules_enabled then
+  workshop_mk2.module_slots = 6
+  workshop_mk2.allowed_effects = {"consumption", "speed", "productivity", "pollution"}
+else
+  workshop_mk2.module_slots = 0
+  workshop_mk2.allowed_effects = {}
+end
 workshop_mk2.selection_priority = 51
 
 workshop.next_upgrade = "logistic-nexus-workshop-mk2"
