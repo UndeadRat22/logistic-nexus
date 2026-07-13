@@ -98,4 +98,56 @@ describe("construction reservations", function()
       assert.is_nil(storage.construction_reservations[key])
     end)
   end)
+
+  describe("prune_construction_reservations", function()
+    it("preserves reservations for items still requested", function()
+      local network = make_network(1)
+      local workshop_data = make_workshop_data(network, 10)
+
+      Construction.reserve_construction_output(workshop_data, 5)
+
+      local key = Util.construction_reservation_key(network, "iron-plate", "normal")
+      assert.are.equal(5, storage.construction_reservations[key].count)
+
+      -- live_counts maps reservation keys to the live ghost request count
+      local live_counts = {}
+      live_counts[key] = 10
+
+      Construction.prune_construction_reservations(network, live_counts)
+
+      assert.is_not_nil(storage.construction_reservations[key])
+      assert.are.equal(5, storage.construction_reservations[key].count)
+    end)
+
+    it("removes reservations for items no longer requested", function()
+      local network = make_network(1)
+      local workshop_data = make_workshop_data(network, 10)
+
+      Construction.reserve_construction_output(workshop_data, 5)
+
+      local key = Util.construction_reservation_key(network, "iron-plate", "normal")
+
+      -- Empty live_counts: the item is no longer requested
+      Construction.prune_construction_reservations(network, {})
+
+      assert.is_nil(storage.construction_reservations[key])
+    end)
+
+    it("clamps reservation count down to live request count", function()
+      local network = make_network(1)
+      local workshop_data = make_workshop_data(network, 10)
+
+      Construction.reserve_construction_output(workshop_data, 8)
+
+      local key = Util.construction_reservation_key(network, "iron-plate", "normal")
+
+      local live_counts = {}
+      live_counts[key] = 3
+
+      Construction.prune_construction_reservations(network, live_counts)
+
+      assert.is_not_nil(storage.construction_reservations[key])
+      assert.are.equal(3, storage.construction_reservations[key].count)
+    end)
+  end)
 end)

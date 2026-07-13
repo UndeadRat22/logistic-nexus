@@ -719,7 +719,11 @@ function M.collect_construction_requests(network, requested)
   end
 
   if cache and cache.has_result then
-    M.prune_construction_reservations(network, ghost_counts)
+    local live_counts = {}
+    for key, entry in pairs(ghost_counts) do
+      live_counts[key] = entry.requested
+    end
+    M.prune_construction_reservations(network, live_counts)
   end
 
   return request_count
