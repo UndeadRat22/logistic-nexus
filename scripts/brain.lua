@@ -396,7 +396,8 @@ function M.process_brain(brain)
     shortage_count = metrics.shortage_count or 0,
     candidate_count = #candidates,
     product_limit = representative_controls.product_limit or C.DEFAULT_PRODUCT_LIMIT,
-    targets = target_metrics
+    targets = target_metrics,
+    workers = M.collect_worker_metrics(brain)
   }
 end
 

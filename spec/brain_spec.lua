@@ -131,4 +131,67 @@ describe("brain", function()
       end)
     end)
   end)
+
+  describe("collect_worker_metrics", function()
+    it("returns metrics for each workshop", function()
+      storage.workshops = {
+        [1] = {
+          entity = {valid = true},
+          assignment = {
+            state = "crafting_step",
+            item = "iron-plate",
+            quality = "normal",
+            replans = 2
+          }
+        },
+        [2] = {
+          entity = {valid = true},
+          assignment = nil
+        }
+      }
+
+      local brain = {workshops = {1, 2}}
+      local workers = Brain.collect_worker_metrics(brain)
+
+      assert.are.equal(2, #workers)
+      assert.are.equal(1, workers[1].unit_number)
+      assert.are.equal("crafting_step", workers[1].state)
+      assert.are.equal("iron-plate", workers[1].target)
+      assert.are.equal(2, workers[1].replans)
+      assert.are.equal(2, workers[2].unit_number)
+      assert.are.equal("idle", workers[2].state)
+      assert.is_nil(workers[2].target)
+    end)
+
+    it("reports waiting_inputs progress", function()
+      storage.workshops = {
+        [1] = {
+          entity = {valid = true},
+          companions = {
+            requester = {valid = true}
+          },
+          assignment = {
+            state = "waiting_inputs",
+            item = "copper-plate",
+            quality = "normal",
+            requests = {
+              {name = "copper-ore", quality = "normal", amount = 10}
+            }
+          }
+        }
+      }
+
+      local brain = {workshops = {1}}
+      local workers = Brain.collect_worker_metrics(brain)
+
+      assert.are.equal(1, #workers)
+      assert.are.equal("waiting_inputs", workers[1].state)
+    end)
+
+    it("handles empty workshops list", function()
+      local brain = {workshops = {}}
+      local workers = Brain.collect_worker_metrics(brain)
+      assert.are.same({}, workers)
+    end)
+  end)
 end)
