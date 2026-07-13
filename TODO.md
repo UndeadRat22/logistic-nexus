@@ -4,10 +4,6 @@ Known limitations and potential future features.
 
 ## Open
 
-### 10. No alerts when an item cannot be crafted
-Blocked items are only visible through the entity status icon. Consider
-flying-text alerts or console messages when a requested item is uncraftable.
-
 ## Done
 
 ### 1. One final-product job per workshop at a time
@@ -22,6 +18,12 @@ automatically for assembling-machine entities.
 
 ### 3. Fixed crafting speed
 Addressed by the MK2 workshop tier (see item #12).
+
+### 10. No alerts when an item cannot be crafted
+Added flying-text alerts for blocked items. When a shortage is uncraftable or
+a plan is blocked, `Brain.process_brain` triggers `Alerts.alert_blocked_item`,
+which creates a red flying-text label at a workshop and respects a per-item
+cooldown to avoid spam.
 
 ### 11. No blueprint copy-paste support
 Both workshop tiers now set `allow_copy_paste = true`, so blueprints include

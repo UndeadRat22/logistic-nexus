@@ -10,6 +10,7 @@ local Recipes = require("scripts.recipes")
 local Planner = require("scripts.planner")
 local Workshop = require("scripts.workshop")
 local Status = require("scripts.status")
+local Alerts = require("scripts.alerts")
 
 local M = {}
 
@@ -339,12 +340,23 @@ function M.process_brain(brain)
   end
 
   local target_metrics = {}
+  local alert_workshop = idle[1]
   for index, shortage in ipairs(shortages) do
     local candidate = candidates_by_key[Util.item_key(shortage.name, shortage.quality)]
     local blocked = candidate and candidate.blocked_reason
     local blocked_reason = blocked and blocked.reason or nil
     if not candidate and (shortage.remaining_units or 0) > 0 then
       blocked_reason = "uncraftable"
+    end
+
+    if blocked_reason and alert_workshop then
+      Alerts.alert_blocked_item(
+        brain,
+        alert_workshop,
+        Util.status_item_name(shortage.name, shortage.quality),
+        blocked_reason,
+        game.tick
+      )
     end
 
     target_metrics[index] = {
