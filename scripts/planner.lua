@@ -23,6 +23,16 @@ function M.build_internal_craft_plan(
   quality = Util.quality_name(quality)
   options = options or {}
 
+  local trace = options.trace
+  local function log_trace(level, message)
+    if not trace then
+      return
+    end
+    table.insert(trace, string.rep("  ", level or 0) .. message)
+  end
+
+  log_trace(0, "Plan target: " .. target_name .. " (quality: " .. quality .. ")")
+
   local recipe, product_amount = Recipes.cached_recipe_for_item(
     brain,
     workshop,
@@ -30,15 +40,21 @@ function M.build_internal_craft_plan(
     target_name
   )
   if not recipe then
+    log_trace(0, "BLOCKED: no enabled recipe for " .. target_name)
     return nil, {
       reason = "uncraftable",
       item = target_name
     }
   end
 
+  log_trace(0, "Recipe: " .. recipe.name
+      .. " (category: " .. tostring(recipe.category)
+      .. ", produces: " .. tostring(product_amount) .. ")")
+
   local root_ingredients = Recipes.aggregate_recipe_ingredients(recipe, 1, quality)
   local root_outputs = Recipes.recipe_outputs(recipe, quality)
   if not (root_ingredients and root_outputs) then
+    log_trace(0, "BLOCKED: recipe " .. recipe.name .. " has unsupported ingredients/products")
     return nil, {
       reason = "unsupported",
       item = target_name
@@ -76,12 +92,13 @@ function M.build_internal_craft_plan(
     return remaining_network[key]
   end
 
-  local function request_existing(name, amount, item_quality)
+  local function request_existing(name, amount, item_quality, level)
     local key = Util.item_key(name, item_quality)
     local internal_available = remaining_internal[key] or 0
     local internal_used = math.min(internal_available, amount)
 
     if internal_used > 0 then
+      log_trace(level, "Use " .. internal_used .. " from internal buffer")
       remaining_internal[key] = internal_available - internal_used
       amount = amount - internal_used
     end
@@ -94,6 +111,7 @@ function M.build_internal_craft_plan(
     local local_used = math.min(local_available, amount)
 
     if local_used > 0 then
+      log_trace(level, "Use " .. local_used .. " from requester/local stock")
       remaining_local[key] = local_available - local_used
       Util.add_count(requests, name, local_used, item_quality)
       amount = amount - local_used
@@ -107,17 +125,22 @@ function M.build_internal_craft_plan(
     local requested = math.min(available, amount)
 
     if requested > 0 then
+      log_trace(level, "Use " .. requested .. " from network (" .. available .. " available)")
       remaining_network[key] = available - requested
       Util.add_count(requests, name, requested, item_quality)
       Util.add_count(network_used, name, requested, item_quality)
     end
 
-    return amount - requested
+    local remaining = amount - requested
+    if remaining > 0 then
+      log_trace(level, "Must craft remaining: " .. remaining)
+    end
+    return remaining
   end
 
   local plan_item
 
-  local function append_recipe_steps(name, amount, item_quality, trail)
+  local function append_recipe_steps(name, amount, item_quality, trail, level)
     local child_recipe, child_product_amount = Recipes.cached_recipe_for_item(
       brain,
       workshop,
@@ -125,6 +148,7 @@ function M.build_internal_craft_plan(
       name
     )
     if not child_recipe then
+      log_trace(level, "BLOCKED: no enabled recipe for " .. name)
       return false, {
         reason = "missing-leaf",
         item = name
@@ -133,6 +157,7 @@ function M.build_internal_craft_plan(
 
     local key = Util.item_key(name, item_quality)
     if trail[key] then
+      log_trace(level, "BLOCKED: recipe cycle detected at " .. name)
       return false, {
         reason = "cycle",
         item = name
@@ -146,6 +171,7 @@ function M.build_internal_craft_plan(
     )
     local child_outputs = Recipes.recipe_outputs(child_recipe, item_quality)
     if not (child_ingredients and child_outputs and child_product_amount) then
+      log_trace(level, "BLOCKED: recipe " .. child_recipe.name .. " has unsupported ingredients/products")
       return false, {
         reason = "unsupported",
         item = name
@@ -154,21 +180,28 @@ function M.build_internal_craft_plan(
 
     trail[key] = true
     local craft_count = math.ceil(amount / child_product_amount)
+    log_trace(level, "Craft using " .. child_recipe.name
+        .. " (category: " .. tostring(child_recipe.category)
+        .. ", produces: " .. tostring(child_product_amount) .. ")")
+    log_trace(level, "Craft count: " .. craft_count)
     local produced = {}
 
     for _ = 1, craft_count do
       for _, ingredient in pairs(child_ingredients) do
         local amount = Util.ingredient_count(ingredient)
         if not amount then
+          log_trace(level, "BLOCKED: ingredient " .. ingredient.name .. " has unsupported amount")
           trail[key] = nil
           return false, {reason = "unsupported-amount", item = ingredient.name}
         end
 
+        log_trace(level + 1, "Need: " .. ingredient.name .. " x" .. amount)
         local ok, blocked = plan_item(
           ingredient.name,
           amount,
           ingredient.quality,
-          trail
+          trail,
+          level + 1
         )
 
         if not ok then
@@ -206,26 +239,30 @@ function M.build_internal_craft_plan(
     return true, nil
   end
 
-  function plan_item(name, amount, item_quality, trail)
-    local remaining = request_existing(name, amount, item_quality)
+  function plan_item(name, amount, item_quality, trail, level)
+    local remaining = request_existing(name, amount, item_quality, level)
     if remaining <= 0 then
+      log_trace(level - 1, "Satisfied from existing stock")
       return true, nil
     end
 
-    return append_recipe_steps(name, remaining, item_quality, trail)
+    return append_recipe_steps(name, remaining, item_quality, trail, level)
   end
 
   for _, ingredient in pairs(root_ingredients) do
     local amount = Util.ingredient_count(ingredient)
     if not amount then
+      log_trace(0, "BLOCKED: ingredient " .. ingredient.name .. " has unsupported amount")
       return nil, {reason = "unsupported-amount", item = ingredient.name}
     end
 
+    log_trace(1, "Need: " .. ingredient.name .. " x" .. amount)
     local ok, blocked = plan_item(
       ingredient.name,
       amount,
       ingredient.quality,
-      {}
+      {},
+      2
     )
 
     if not ok then

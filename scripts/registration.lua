@@ -10,6 +10,7 @@ local Companions = require("scripts.companions")
 local Construction = require("scripts.construction")
 local Recipes = require("scripts.recipes")
 local Brain = require("scripts.brain")
+local Planner = require("scripts.planner")
 local Workshop = require("scripts.workshop")
 
 local M = {}
@@ -420,28 +421,53 @@ function M.debug_mall_item(player, item_name)
     return
   end
 
-  local ingredients = Recipes.recipe_item_ingredients(recipe) or {}
-  player.print(
-    "AG Mall debug: "
-        .. item_name
-        .. " uses "
-        .. recipe.name
-        .. " and produces "
-        .. (product_amount or 0)
-        .. "."
+  -- Build a full internal craft plan and trace the path to show where/why it
+  -- would be skipped.
+  local trace = {}
+  local debug_brain = {
+    force_name = network.force.name,
+    recipe_choices = {},
+    raw_supply_counts = {}
+  }
+  local plan, blocked = Planner.build_internal_craft_plan(
+    workshop_data.entity,
+    network,
+    item_name,
+    "normal",
+    debug_brain,
+    {trace = trace}
   )
 
-  for _, ingredient in pairs(ingredients) do
-    local available = Network.get_available_count(network, ingredient.name, "normal")
+  player.print("AG Mall debug: craft trace for " .. item_name)
+  for _, line in ipairs(trace) do
+    player.print("AG Mall debug: " .. line)
+  end
+
+  if not plan then
     player.print(
-      "AG Mall debug: ingredient "
-          .. ingredient.name
-          .. " need "
-          .. (Util.ingredient_count(ingredient) or 0)
-          .. ", available "
-          .. available
+      "AG Mall debug: PLAN BLOCKED - "
+          .. (blocked.reason or "unknown")
+          .. " at "
+          .. (blocked.item or item_name)
           .. "."
     )
+  else
+    player.print(
+      "AG Mall debug: plan OK - "
+          .. #plan.steps
+          .. " crafting step(s), recipe: "
+          .. recipe.name
+          .. "."
+    )
+    for _, request in ipairs(plan.requests or {}) do
+      player.print(
+        "AG Mall debug: request from network: "
+            .. request.name
+            .. " x"
+            .. request.amount
+            .. "."
+      )
+    end
   end
 end
 
