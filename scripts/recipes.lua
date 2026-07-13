@@ -148,7 +148,7 @@ function M.cached_recipe_for_item(brain, workshop, force, item_name)
     end
 
     local recipe = force.recipes[cached.recipe_name]
-    if recipe and recipe.valid then
+    if recipe and recipe.valid and recipe.enabled then
       return recipe, cached.product_amount
     end
   end
