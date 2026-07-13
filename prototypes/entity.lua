@@ -59,6 +59,22 @@ workshop.selection_box = {{-2, -1}, {1, 2}}
 workshop.flags = workshop.flags or {}
 table.insert(workshop.flags, "hide-alt-info")
 
+local workshop_mk2 = table.deepcopy(workshop)
+workshop_mk2.name = "logistic-nexus-workshop-mk2"
+workshop_mk2.localised_name = {"entity-name.logistic-nexus-workshop-mk2"}
+workshop_mk2.localised_description = {"entity-description.logistic-nexus-workshop-mk2"}
+workshop_mk2.icon = "__logistic-nexus__/graphics/icons/logistic-nexus-workshop.png"
+workshop_mk2.minable = {
+  mining_time = 0.3,
+  result = "logistic-nexus-workshop-mk2"
+}
+workshop_mk2.next_upgrade = nil
+workshop_mk2.crafting_speed = 2
+workshop_mk2.module_slots = 6
+workshop_mk2.energy_usage = "1500kW"
+
+workshop.next_upgrade = "logistic-nexus-workshop-mk2"
+
 map_display.name = "logistic-nexus-map-display"
 map_display.localised_name = {"entity-name.logistic-nexus-workshop"}
 map_display.minable = nil
@@ -183,6 +199,7 @@ output_inserter.flags = {
 
 data:extend({
   workshop,
+  workshop_mk2,
   map_display,
   world_display,
   requester,

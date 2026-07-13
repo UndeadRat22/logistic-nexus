@@ -25,7 +25,7 @@ local sync_barrelled_recipes
 function M.register_workshop(entity)
   Storage.init_storage()
 
-  if not (entity and entity.valid and entity.name == C.WORKSHOP_NAME and entity.unit_number) then
+  if not (entity and entity.valid and C.WORKSHOP_NAMES[entity.name] and entity.unit_number) then
     return
   end
 
@@ -235,7 +235,7 @@ function M.rebuild_workshops()
   storage.companion_owners = {}
 
   for _, surface in pairs(game.surfaces) do
-    for _, entity in pairs(surface.find_entities_filtered({name = C.WORKSHOP_NAME})) do
+    for _, entity in pairs(surface.find_entities_filtered({name = {C.WORKSHOP_NAME, C.WORKSHOP_MK2_NAME}})) do
       M.register_workshop(entity)
     end
   end
@@ -321,7 +321,7 @@ end
 
 local function find_debug_workshop(player)
   local selected = player and player.selected
-  if selected and selected.valid and selected.name == C.WORKSHOP_NAME and selected.unit_number then
+  if selected and selected.valid and C.WORKSHOP_NAMES[selected.name] and selected.unit_number then
     return storage.workshops[selected.unit_number]
   end
 
@@ -480,7 +480,7 @@ function M.debug_construction_item(player, item_name)
 
   local network
   local selected = player.selected
-  if selected and selected.valid and selected.name == C.WORKSHOP_NAME then
+  if selected and selected.valid and C.WORKSHOP_NAMES[selected.name] then
     local workshop_data = selected.unit_number and storage.workshops[selected.unit_number]
     network = workshop_data and Network.get_network_for_workshop(workshop_data)
   end
@@ -649,7 +649,7 @@ function M.debug_status(command)
 
   local network
   local selected = player and player.selected
-  if selected and selected.valid and selected.name == C.WORKSHOP_NAME then
+  if selected and selected.valid and C.WORKSHOP_NAMES[selected.name] then
     local workshop_data = selected.unit_number and storage.workshops[selected.unit_number]
     network = workshop_data and Network.get_network_for_workshop(workshop_data)
   end

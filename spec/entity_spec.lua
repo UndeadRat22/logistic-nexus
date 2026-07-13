@@ -115,4 +115,18 @@ describe("workshop entity prototype", function()
     assert.is_not_nil(workshop)
     assert.is_false(workshop.allow_copy_paste)
   end)
+
+  it("creates an MK2 tier with faster speed and more module slots", function()
+    require("prototypes.entity")
+
+    local mk2 = data.raw["assembling-machine"]["logistic-nexus-workshop-mk2"]
+    assert.is_not_nil(mk2)
+    assert.are.equal(2, mk2.crafting_speed)
+    assert.are.equal(6, mk2.module_slots)
+    assert.are.equal("1500kW", mk2.energy_usage)
+    assert.is_nil(mk2.next_upgrade)
+
+    local base = data.raw["assembling-machine"]["logistic-nexus-workshop"]
+    assert.are.equal("logistic-nexus-workshop-mk2", base.next_upgrade)
+  end)
 end)

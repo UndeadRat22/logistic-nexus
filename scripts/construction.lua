@@ -809,7 +809,7 @@ function M.collect_prioritized_shortages(network, brain)
   local shortages, request_count = M.collect_shortages(network, brain)
 
   for _, shortage in pairs(shortages) do
-    if shortage.name == C.WORKSHOP_NAME then
+    if C.WORKSHOP_NAMES[shortage.name] then
       shortage.priority = 4
     elseif (shortage.construction_requested or 0) > 0 then
       shortage.priority = 3

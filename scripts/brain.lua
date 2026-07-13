@@ -94,8 +94,8 @@ end
 ------------------------------------------------------------
 
 function M.candidate_choice_sort(a, b)
-  local a_is_mall = a.shortage.name == C.WORKSHOP_NAME
-  local b_is_mall = b.shortage.name == C.WORKSHOP_NAME
+  local a_is_mall = not not C.WORKSHOP_NAMES[a.shortage.name]
+  local b_is_mall = not not C.WORKSHOP_NAMES[b.shortage.name]
 
   if a_is_mall ~= b_is_mall then
     return a_is_mall

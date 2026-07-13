@@ -4,6 +4,11 @@
 local M = {}
 
 M.WORKSHOP_NAME = "logistic-nexus-workshop"
+M.WORKSHOP_MK2_NAME = "logistic-nexus-workshop-mk2"
+M.WORKSHOP_NAMES = {
+  [M.WORKSHOP_NAME] = true,
+  [M.WORKSHOP_MK2_NAME] = true
+}
 M.MAP_DISPLAY_NAME = "logistic-nexus-map-display"
 M.WORLD_DISPLAY_NAME = "logistic-nexus-world-display"
 M.REQUESTER_NAME = "logistic-nexus-requester"

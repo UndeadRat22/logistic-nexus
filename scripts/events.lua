@@ -39,7 +39,10 @@ end
 function M.on_built_entity(event)
   local entity = event.entity
   Construction.release_built_entity_construction_reservations(entity)
-  Registration.register_workshop(entity)
+
+  if entity and entity.valid and C.WORKSHOP_NAMES[entity.name] then
+    Registration.register_workshop(entity)
+  end
 
   if entity and entity.valid and entity.surface and entity.force then
     Storage.mark_network_schedule_dirty(
@@ -55,7 +58,7 @@ function M.on_mined_entity(event)
     return
   end
 
-  if entity.name == C.WORKSHOP_NAME then
+  if C.WORKSHOP_NAMES[entity.name] then
     Registration.unregister_workshop(entity, false)
   elseif C.COMPANION_NAMES[entity.name] then
     Registration.unregister_companion(entity)
@@ -101,7 +104,7 @@ end
 
 function M.on_gui_opened(event)
   local entity = event.entity
-  if not (entity and entity.valid and entity.name == C.WORKSHOP_NAME) then
+  if not (entity and entity.valid and C.WORKSHOP_NAMES[entity.name]) then
     return
   end
 

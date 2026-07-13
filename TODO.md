@@ -4,10 +4,6 @@ Known limitations and potential future features.
 
 ## Open
 
-### 3. Fixed crafting speed
-The workshop has `crafting_speed = 1` with no upgrade path. Consider tiered
-workshops or research-based speed upgrades.
-
 ### 10. No alerts when an item cannot be crafted
 Blocked items are only visible through the entity status icon. Consider
 flying-text alerts or console messages when a requested item is uncraftable.
@@ -15,10 +11,6 @@ flying-text alerts or console messages when a requested item is uncraftable.
 ### 11. No blueprint copy-paste support
 The workshop prototype sets `allow_copy_paste = false`. Consider enabling
 blueprint copy-paste, at least for circuit conditions.
-
-### 12. No workshop upgrade tiers
-Only one workshop entity exists and `next_upgrade = nil`. Consider faster or
-MK2 workshop variants.
 
 ## Done
 
@@ -31,6 +23,15 @@ the next queued job starts immediately instead of waiting for the next assessmen
 The workshop prototype now has 4 module slots and allows all effects (consumption,
 speed, productivity, pollution). Factorio handles speed/productivity/beacon bonuses
 automatically for assembling-machine entities.
+
+### 3. Fixed crafting speed
+Addressed by the MK2 workshop tier (see item #12).
+
+### 12. No workshop upgrade tiers
+Added `logistic-nexus-workshop-mk2` with `crafting_speed = 2`, 6 module slots,
+and a technology unlock. The base workshop now has `next_upgrade` pointing to
+MK2, and all runtime checks use `WORKSHOP_NAMES` so both tiers are registered,
+mined, rebuilt, and prioritized.
 
 ### 9. No production statistics or status GUI
 Added `/logistic-nexus-gui` which opens a status panel showing workshop summary,

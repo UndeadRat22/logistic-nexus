@@ -17,5 +17,23 @@ data:extend({
     results = {
       {type = "item", name = "logistic-nexus-workshop", amount = 1}
     }
+  },
+  {
+    type = "recipe",
+    name = "logistic-nexus-workshop-mk2",
+    localised_name = {"recipe-name.logistic-nexus-workshop-mk2"},
+    enabled = false,
+    energy_required = 15,
+    ingredients = {
+      {type = "item", name = "logistic-nexus-workshop", amount = 1},
+      {type = "item", name = "assembling-machine-3", amount = 2},
+      {type = "item", name = "stack-inserter", amount = 4},
+      {type = "item", name = "advanced-circuit", amount = 20},
+      {type = "item", name = "steel-plate", amount = 20},
+      {type = "item", name = "processing-unit", amount = 5}
+    },
+    results = {
+      {type = "item", name = "logistic-nexus-workshop-mk2", amount = 1}
+    }
   }
 })
