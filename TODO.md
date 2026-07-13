@@ -4,10 +4,6 @@ Known limitations and potential future features.
 
 ## Open
 
-### 1. One final-product job per workshop at a time
-Each Logistic Nexus workshop only handles a single final-product job. Consider allowing
-multiple concurrent jobs or explicit job queueing.
-
 ### 2. No module / beacon / effect support
 The workshop prototype sets `module_slots = 0` and `allowed_effects = {}`.
 Consider allowing modules to boost crafting speed or productivity.
@@ -33,6 +29,11 @@ Only one workshop entity exists and `next_upgrade = nil`. Consider faster or
 MK2 workshop variants.
 
 ## Done
+
+### 1. One final-product job per workshop at a time
+Workshops now maintain a `job_queue` of up to `WORKSHOP_QUEUE_SIZE` final-product jobs.
+The brain assigns jobs to any workshop with queue space, and when a job finishes draining
+the next queued job starts immediately instead of waiting for the next assessment tick.
 
 ### 18. Better handling of script-enabled recipes
 Fixed by clearing negative recipe-cache entries during each assessment, so

@@ -409,7 +409,16 @@ function M.reset_workshop_assignment(workshop_data)
   Status.destroy_goal_sprite(workshop_data)
 end
 
-function M.assign_job_to_workshop(workshop_data, job)
+function M.can_accept_job(workshop_data)
+  if not (workshop_data and workshop_data.entity and workshop_data.entity.valid) then
+    return false
+  end
+
+  local queue = workshop_data.job_queue or {}
+  return #queue < C.WORKSHOP_QUEUE_SIZE
+end
+
+function M.start_job_now(workshop_data, job)
   local requester = workshop_data.companions and workshop_data.companions.requester
 
   if not M.set_workshop_recipe(workshop_data, nil) then
@@ -463,6 +472,24 @@ function M.assign_job_to_workshop(workshop_data, job)
   Status.set_finishing_status(workshop, job.target_item or job.name)
 
   return true
+end
+
+function M.assign_job_to_workshop(workshop_data, job)
+  if not M.can_accept_job(workshop_data) then
+    return false
+  end
+
+  if workshop_data.assignment then
+    workshop_data.job_queue = workshop_data.job_queue or {}
+    table.insert(workshop_data.job_queue, job)
+    return true
+  end
+
+  return M.start_job_now(workshop_data, job)
+end
+
+function M.queue_job(workshop_data, job)
+  return M.assign_job_to_workshop(workshop_data, job)
 end
 
 ------------------------------------------------------------
@@ -835,6 +862,15 @@ function M.tick_workshop_worker(workshop_data, brain)
   if assignment.state == "draining" then
     if M.workshop_is_clear_for_reassessment(workshop_data) then
       M.reset_workshop_assignment(workshop_data)
+
+      local next_job = workshop_data.job_queue and workshop_data.job_queue[1]
+      if next_job then
+        table.remove(workshop_data.job_queue, 1)
+        if M.start_job_now(workshop_data, next_job) then
+          return "busy"
+        end
+      end
+
       Status.set_idle_status(workshop)
       return "idle"
     end

@@ -76,6 +76,14 @@ function M.collect_active_assignments(brain)
       machines[key] = (machines[key] or 0) + 1
       outputs[key] = (outputs[key] or 0) + (assignment.expected_output or 1)
     end
+
+    for _, queued in pairs(workshop_data and workshop_data.job_queue or {}) do
+      if queued.target_item then
+        local key = Util.item_key(queued.target_item, queued.target_quality or "normal")
+        machines[key] = (machines[key] or 0) + 1
+        outputs[key] = (outputs[key] or 0) + (queued.product_amount or 1)
+      end
+    end
   end
 
   return machines, outputs
@@ -239,14 +247,16 @@ function M.process_brain(brain)
 
     if state == "invalid" then
       storage.workshops[unit_number] = nil
-    elseif state == "idle" then
-      table.insert(idle, workshop_data)
-      if not workshop_data.was_idle then
-        became_idle = true
-      end
-      workshop_data.was_idle = true
     elseif workshop_data then
-      workshop_data.was_idle = false
+      if Workshop.can_accept_job(workshop_data) then
+        table.insert(idle, workshop_data)
+        if not workshop_data.could_accept_job then
+          became_idle = true
+        end
+        workshop_data.could_accept_job = true
+      else
+        workshop_data.could_accept_job = false
+      end
     end
   end
 
@@ -304,7 +314,7 @@ function M.process_brain(brain)
     if job then
       if Workshop.assign_job_to_workshop(workshop_data, job) then
         assigned_count = assigned_count + 1
-        workshop_data.was_idle = false
+        workshop_data.could_accept_job = false
         candidate.remaining_units = math.max(
           0,
           candidate.remaining_units - (job.product_amount or 1)
