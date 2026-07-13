@@ -5,7 +5,8 @@ local C = require("scripts.constants")
 local Storage = require("scripts.storage")
 local Network = require("scripts.network")
 local Construction = require("scripts.construction")
-local Companions = require("scripts.companions")
+-- Loaded for side effects (event/command registration).
+local Companions = require("scripts.companions") -- luacheck: ignore
 local Brain = require("scripts.brain")
 local Registration = require("scripts.registration")
 local Gui = require("scripts.gui")
@@ -64,7 +65,7 @@ function M.on_mined_entity(event)
     Registration.unregister_companion(entity)
   end
 
-  Construction.unregister_upgrade_marked(entity)  end
+  Construction.unregister_upgrade_marked(entity)
 
   if entity.valid and entity.surface and entity.force then
     Storage.mark_network_schedule_dirty(

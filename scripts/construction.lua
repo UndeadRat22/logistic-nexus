@@ -771,7 +771,7 @@ function M.collect_construction_requests(network, requested)
   local ghost_counts = cache and cache.ghost_counts or {}
   local request_count = cache and cache.request_count or 0
 
-  for key, entry in pairs(ghost_counts) do
+  for _key, entry in pairs(ghost_counts) do
     local reserved = M.get_construction_reservation(
       network,
       entry.name,
@@ -792,8 +792,8 @@ function M.collect_construction_requests(network, requested)
 
   if cache and cache.has_result then
     local live_counts = {}
-    for key, entry in pairs(ghost_counts) do
-      live_counts[key] = entry.requested
+    for _key, entry in pairs(ghost_counts) do
+      live_counts[_key] = entry.requested
     end
     M.prune_construction_reservations(network, live_counts)
   end
@@ -805,7 +805,7 @@ end
 -- SHORTAGE COLLECTION
 ------------------------------------------------------------
 
-function M.collect_shortages(network, brain)
+function M.collect_shortages(network)
   local requested = {}
   local request_count = 0
 
@@ -883,8 +883,8 @@ function M.collect_shortages(network, brain)
   return shortages, request_count
 end
 
-function M.collect_prioritized_shortages(network, brain)
-  local shortages, request_count = M.collect_shortages(network, brain)
+function M.collect_prioritized_shortages(network)
+  local shortages, request_count = M.collect_shortages(network)
 
   for _, shortage in pairs(shortages) do
     if C.WORKSHOP_NAMES[shortage.name] then

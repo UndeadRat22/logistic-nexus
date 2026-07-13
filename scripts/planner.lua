@@ -1,7 +1,6 @@
 -- Logistic Nexus
 -- Craft plan building: determines what to craft and what to request.
 
-local C = require("scripts.constants")
 local Util = require("scripts.util")
 local Recipes = require("scripts.recipes")
 local Network = require("scripts.network")
@@ -188,17 +187,17 @@ function M.build_internal_craft_plan(
 
     for _ = 1, craft_count do
       for _, ingredient in pairs(child_ingredients) do
-        local amount = Util.ingredient_count(ingredient)
-        if not amount then
+        local ingredient_amount = Util.ingredient_count(ingredient)
+        if not ingredient_amount then
           log_trace(level, "BLOCKED: ingredient " .. ingredient.name .. " has unsupported amount")
           trail[key] = nil
           return false, {reason = "unsupported-amount", item = ingredient.name}
         end
 
-        log_trace(level + 1, "Need: " .. ingredient.name .. " x" .. amount)
+        log_trace(level + 1, "Need: " .. ingredient.name .. " x" .. ingredient_amount)
         local ok, blocked = plan_item(
           ingredient.name,
-          amount,
+          ingredient_amount,
           ingredient.quality,
           trail,
           level + 1

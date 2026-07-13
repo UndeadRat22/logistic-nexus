@@ -15,9 +15,6 @@ local Workshop = require("scripts.workshop")
 
 local M = {}
 
--- Forward declaration for circular dependency (sync_barrelled_recipes is defined below)
-local sync_barrelled_recipes
-
 ------------------------------------------------------------
 -- WORKSHOP REGISTRATION
 ------------------------------------------------------------
@@ -355,7 +352,7 @@ function M.debug_mall_item(player, item_name)
     return
   end
 
-  local recipe, product_amount = Recipes.find_recipe_for_item(workshop_data.entity, network.force, item_name)
+  local recipe = Recipes.find_recipe_for_item(workshop_data.entity, network.force, item_name)
   if not recipe then
     local source_recipe = network.force.recipes[item_name]
     local barrelled_recipe = network.force.recipes[C.BARRELLED_RECIPE_PREFIX .. item_name]

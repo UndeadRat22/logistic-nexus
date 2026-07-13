@@ -222,10 +222,7 @@ local function make_barrelled_recipe(recipe)
 
   local main_product = recipe.main_product
   if not (main_product and products[main_product]) then
-    for name in pairs(products) do
-      main_product = name
-      break
-    end
+    main_product = next(products)
   end
 
   return {

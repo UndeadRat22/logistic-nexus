@@ -290,7 +290,7 @@ function M.process_brain(brain)
   -- Clear negative recipe cache entries so recipes enabled by scripts/mods
   -- since the last assessment can be discovered.
   M.clear_stale_recipe_cache(brain)
-  local shortages, metrics = Construction.collect_prioritized_shortages(network, brain)
+  local shortages, metrics = Construction.collect_prioritized_shortages(network)
   brain.metrics = metrics
   local representative = idle[1]
   local representative_controls = Workshop.read_workshop_circuit_controls(representative.entity)

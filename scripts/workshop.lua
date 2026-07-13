@@ -590,7 +590,7 @@ function M.replan_waiting_assignment(
   return true, nil
 end
 
-function M.abandon_waiting_assignment(workshop_data, assignment, blocked)
+function M.abandon_waiting_assignment(workshop_data, _assignment, blocked)
   local requester = workshop_data.companions and workshop_data.companions.requester
   if requester and requester.valid then
     Companions.clear_requester_requests(requester)
