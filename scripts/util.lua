@@ -47,7 +47,9 @@ end
 ------------------------------------------------------------
 
 function M.fixed_product_amount(product)
-  if product.amount and product.amount > 0 then
+  if product.amount
+      and product.amount > 0
+      and not product.probability then
     return product.amount
   end
 

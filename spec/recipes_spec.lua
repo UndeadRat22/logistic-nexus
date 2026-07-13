@@ -41,15 +41,14 @@ describe("recipes", function()
       assert.are.equal(5, Recipes.recipe_product_amount(recipe, "iron-plate"))
     end)
 
-    it("returns amount even when probability is set (products ignore probability)", function()
-      -- fixed_product_amount does NOT check probability (unlike fixed_ingredient_amount)
+    it("returns nil when product has probability", function()
       local recipe = {
         name = "some-recipe",
         products = {
           {type = "item", name = "iron-plate", amount = 2, probability = 0.5}
         }
       }
-      assert.are.equal(2, Recipes.recipe_product_amount(recipe, "iron-plate"))
+      assert.is_nil(Recipes.recipe_product_amount(recipe, "iron-plate"))
     end)
 
     it("returns nil when product has amount_min", function()
@@ -208,16 +207,13 @@ describe("recipes", function()
       assert.is_nil(Recipes.recipe_outputs(recipe, "normal"))
     end)
 
-    it("returns output even when probability is set (products ignore probability)", function()
-      -- fixed_product_amount does NOT check probability (unlike fixed_ingredient_amount)
+    it("returns nil when product has probability", function()
       local recipe = {
         products = {
           {type = "item", name = "iron-plate", amount = 2, probability = 0.5}
         }
       }
-      local result = Recipes.recipe_outputs(recipe, "normal")
-      assert.are.equal(1, #result)
-      assert.are.equal(2, result[1].amount)
+      assert.is_nil(Recipes.recipe_outputs(recipe, "normal"))
     end)
 
     it("sets quality on outputs", function()
