@@ -279,3 +279,27 @@ for _, technology in pairs(data.raw.technology) do
     end
   end
 end
+
+-- Ensure the AG Mall workshop can craft recipes from mod-added categories.
+-- Categories are collected from every recipe so item-only mod recipes are
+-- supported without requiring mod authors to patch the workshop prototype.
+local workshop = data.raw["assembling-machine"]["ag-mall-workshop"]
+if workshop then
+  local categories = {}
+  for _, category in pairs(workshop.crafting_categories or {}) do
+    if type(category) == "string" then
+      categories[category] = true
+    end
+  end
+  for _, recipe in pairs(data.raw.recipe) do
+    local category = recipe.category or "crafting"
+    if type(category) == "string" then
+      categories[category] = true
+    end
+  end
+  local category_list = {}
+  for category in pairs(categories) do
+    table.insert(category_list, category)
+  end
+  workshop.crafting_categories = category_list
+end
