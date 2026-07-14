@@ -978,6 +978,9 @@ function M.tick_workshop_worker(workshop_data, brain)
     return "busy"
   end
 
+  if workshop_data.assignment and workshop_data.assignment.internal_inventory then
+    M.output_internal_inventory(workshop_data, workshop_data.assignment)
+  end
   M.reset_workshop_assignment(workshop_data)
   return "idle"
 end

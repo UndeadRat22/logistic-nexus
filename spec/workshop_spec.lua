@@ -627,3 +627,84 @@ describe("brain active assignment accounting with queues", function()
     assert.are.equal(7, outputs["copper-plate|normal"])
   end)
 end)
+
+describe("tick_workshop_worker fallback preserves internal inventory", function()
+  local Util = require("scripts.util")
+  local C = require("scripts.constants")
+
+  local function make_entity()
+    return {
+      valid = true,
+      name = C.WORKSHOP_NAME,
+      unit_number = 1,
+      position = {x = 0, y = 0},
+      products_finished = 0,
+      crafting_progress = 0,
+      get_recipe = function() return nil, nil end,
+      set_recipe = function() return {} end,
+      get_output_inventory = function()
+        return {
+          valid = true,
+          is_empty = function() return true end,
+          get_contents = function() return {} end
+        }
+      end,
+      insert = function() return 0 end,
+      surface = {spill_item_stack = function() end}
+    }
+  end
+
+  local function make_requester()
+    return {
+      valid = true,
+      name = C.REQUESTER_NAME,
+      get_inventory = function()
+        return {
+          valid = true,
+          is_empty = function() return true end,
+          get_contents = function() return {} end,
+          remove = function() return 0 end
+        }
+      end
+    }
+  end
+
+  local function make_provider_with_tracking()
+    local inserted = {}
+    local provider = {
+      valid = true,
+      name = C.PROVIDER_NAME,
+      insert = function(stack)
+        local key = Util.item_key(stack.name, stack.quality)
+        inserted[key] = (inserted[key] or 0) + (stack.count or 0)
+        return stack.count or 0
+      end
+    }
+    return provider, inserted
+  end
+
+  it("outputs internal inventory before resetting on unknown assignment state", function()
+    local provider, inserted = make_provider_with_tracking()
+    local workshop_data = {
+      entity = make_entity(),
+      companions = {
+        provider = provider,
+        requester = make_requester()
+      },
+      assignment = {
+        state = "unknown-state",
+        item = "iron-plate",
+        quality = "normal",
+        internal_inventory = {
+          ["copper-plate|normal"] = 7
+        }
+      }
+    }
+
+    local state = Workshop.tick_workshop_worker(workshop_data, {})
+
+    assert.are.equal("idle", state)
+    assert.are.equal(7, inserted["copper-plate|normal"])
+    assert.is_nil(workshop_data.assignment)
+  end)
+end)
