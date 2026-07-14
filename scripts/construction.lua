@@ -582,6 +582,15 @@ function M.process_construction_scan_block(cache, network)
   local surface = scan and game.surfaces[scan.surface_index]
   local area = scan and scan.blocks[scan.block_index]
   if not (scan and surface and network and network.valid and area) then
+    -- When the blocks list is empty (e.g. network has no construction area),
+    -- treat this as a successful empty scan so the cache is not retried
+    -- every tick. Only mark as a result when we actually had a scan.
+    if scan and network and network.valid then
+      cache.tick = game.tick
+      cache.has_result = true
+      cache.ghost_counts = scan.ghost_counts or {}
+      cache.request_count = scan.request_count or 0
+    end
     cache.scan = nil
     cache.queued = false
     return false

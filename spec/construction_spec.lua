@@ -433,4 +433,59 @@ describe("construction", function()
       assert.is_nil(storage.upgrade_marked[2])
     end)
   end)
+
+  describe("process_construction_scan_block with empty blocks", function()
+    local Util = require("scripts.util")
+    local Storage = require("scripts.storage")
+
+    before_each(function()
+      Storage.init_storage()
+      game.tick = 100
+    end)
+
+    it("marks cache as having a result when blocks list is empty", function()
+      local network = {
+        valid = true,
+        network_id = 1,
+        force = {name = "player"},
+        cells = {}
+      }
+      local surface = {index = 1}
+      local key = Util.construction_scan_key(1, "player", 1)
+      local cache = {
+        key = key,
+        network_id = 1,
+        tick = 0,
+        has_result = false,
+        ghost_counts = {},
+        request_count = 0,
+        scan = nil,
+        queued = true
+      }
+      storage.construction_scans[key] = cache
+      storage.construction_scan_queue = {key}
+      storage.construction_scan_queue_first = 1
+      storage.construction_scan_queue_last = 1
+
+      -- Simulate start_construction_scan with empty blocks
+      cache.scan = {
+        surface_index = surface.index,
+        force_name = "player",
+        network_id = 1,
+        blocks = {},
+        block_index = 1,
+        ghost_counts = {},
+        request_count = 0,
+        seen = {}
+      }
+
+      local more = Construction.process_construction_scan_block(cache, network)
+
+      assert.is_false(more)
+      assert.is_true(cache.has_result)
+      assert.are.equal(100, cache.tick)
+      assert.is_nil(cache.scan)
+      assert.is_false(cache.queued)
+    end)
+  end)
 end)
