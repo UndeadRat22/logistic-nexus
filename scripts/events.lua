@@ -29,6 +29,7 @@ function M.on_configuration_changed()
   storage.construction_scan_queue = {}
   storage.construction_scan_queue_first = 1
   storage.construction_scan_queue_last = 0
+  storage.upgrade_marked = {}
   Registration.sync_barrelled_recipes(nil, {reset_force_effects = true})
   Registration.rebuild_workshops()
 end
