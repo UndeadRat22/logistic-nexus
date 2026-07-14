@@ -5,9 +5,6 @@ local Util = require("scripts.util")
 
 local M = {}
 
--- Shared mutable state (was file-level locals in original control.lua)
-M.preflight_replans_remaining = 0
-
 ------------------------------------------------------------
 -- STORAGE INITIALIZATION
 ------------------------------------------------------------

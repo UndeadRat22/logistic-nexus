@@ -438,7 +438,6 @@ end
 function M.assess_all_workshops()
   Storage.init_storage()
   Storage.init_brains()
-  Storage.preflight_replans_remaining = C.PREFLIGHT_REPLANS_PER_ASSESS
 
   for _, brain in pairs(storage.brains or {}) do
     M.reset_brain_runtime(brain)
@@ -487,7 +486,6 @@ end
 
 function M.process_due_brains()
   Storage.init_storage()
-  Storage.preflight_replans_remaining = C.PREFLIGHT_REPLANS_PER_ASSESS
 
   local slot = game.tick % C.ASSESS_INTERVAL
 

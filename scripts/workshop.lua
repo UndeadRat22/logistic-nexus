@@ -4,7 +4,6 @@
 local C = require("scripts.constants")
 local Util = require("scripts.util")
 local Status = require("scripts.status")
-local Storage = require("scripts.storage")
 local Companions = require("scripts.companions")
 local Construction = require("scripts.construction")
 local Planner = require("scripts.planner")
@@ -330,6 +329,44 @@ function M.requester_has_exact_ingredients(requester, ingredients)
   return true
 end
 
+function M.requester_has_required_ingredients(requester, ingredients)
+  if not (requester and requester.valid) then
+    return false
+  end
+
+  local needed = {}
+  for _, ingredient in pairs(ingredients or {}) do
+    local amount = Util.ingredient_count(ingredient)
+    if not amount then
+      return false
+    end
+    local key = Util.item_key(ingredient.name, ingredient.quality)
+    needed[key] = (needed[key] or 0) + amount
+  end
+
+  local inventory = requester.get_inventory(defines.inventory.chest)
+  if not (inventory and inventory.valid) then
+    return false
+  end
+
+  local actual = {}
+  for _, item in pairs(inventory.get_contents() or {}) do
+    if item.name and (item.count or 0) > 0 then
+      local quality = Util.quality_name(item.quality)
+      local key = Util.item_key(item.name, quality)
+      actual[key] = (actual[key] or 0) + (item.count or 0)
+    end
+  end
+
+  for key, amount in pairs(needed) do
+    if (actual[key] or 0) < amount then
+      return false
+    end
+  end
+
+  return true
+end
+
 ------------------------------------------------------------
 -- RECIPE / JOB MANAGEMENT
 ------------------------------------------------------------
@@ -487,6 +524,7 @@ function M.start_job_now(workshop_data, job)
     internal_inventory = {},
     expected_output = expected_output,
     product_amount = expected_output,
+    batch_count = job.batch_count or 1,
     plan_name = job.plan_name or job.name,
     plan_quality = job.plan_quality or job.quality or "normal",
     plan_priority = job.plan_priority or 1,
@@ -598,7 +636,8 @@ function M.replan_waiting_assignment(
     brain,
     {
       local_counts = Network.requester_planning_counts(requester, true),
-      supply_budget = supply_budget
+      supply_budget = supply_budget,
+      max_batches = assignment.batch_count or 1
     }
   )
 
@@ -662,7 +701,8 @@ function M.refresh_assignment_plan_from_internal(
     brain,
     {
       local_counts = Network.requester_planning_counts(requester, true),
-      internal_counts = assignment.internal_inventory
+      internal_counts = assignment.internal_inventory,
+      max_batches = assignment.batch_count or 1
     }
   )
 
@@ -785,12 +825,6 @@ function M.tick_workshop_worker(workshop_data, brain)
 
     if M.requester_has_exact_ingredients(requester, assignment.requests) then
       if not assignment.preflight_replanned then
-        if Storage.preflight_replans_remaining <= 0 then
-          Status.set_finishing_status(workshop, assignment.item)
-          return "busy"
-        end
-
-        Storage.preflight_replans_remaining = Storage.preflight_replans_remaining - 1
         local replanned, blocked = M.replan_waiting_assignment(
           workshop_data,
           assignment,
@@ -806,41 +840,49 @@ function M.tick_workshop_worker(workshop_data, brain)
         assignment.preflight_replanned = true
       end
 
-      if M.requester_has_exact_ingredients(requester, assignment.requests) then
+      if M.requester_has_required_ingredients(requester, assignment.requests) then
         assignment.state = "settling_inputs"
         assignment.settle_until = game.tick + C.REQUEST_SETTLE_TICKS
       end
       Status.set_finishing_status(workshop, assignment.item)
     else
-      local present, incoming, uncovered = M.assignment_delivery_progress(
-        requester,
-        assignment.requests
-      )
+      if M.requester_has_required_ingredients(requester, assignment.requests) then
+        -- All required items are present in the requester (extras are okay;
+        -- they will be moved to internal inventory and returned later).
+        assignment.state = "settling_inputs"
+        assignment.settle_until = game.tick + C.REQUEST_SETTLE_TICKS
+      else
+        local present, incoming, uncovered = M.assignment_delivery_progress(
+          requester,
+          assignment.requests
+        )
 
-      if present > (assignment.last_present_count or 0)
-          or incoming > (assignment.last_incoming_count or 0) then
-        assignment.last_progress_tick = game.tick
-      end
-
-      assignment.last_present_count = present
-      assignment.last_incoming_count = incoming
-
-      local stalled = game.tick - (assignment.last_progress_tick or game.tick)
-          >= C.WAITING_INPUT_RECHECK_TICKS
-
-      if stalled then
-        if #uncovered == 0 then
+        if present > (assignment.last_present_count or 0)
+            or incoming > (assignment.last_incoming_count or 0) then
           assignment.last_progress_tick = game.tick
-        else
-          local replanned, blocked = M.replan_waiting_assignment(
-            workshop_data,
-            assignment,
-            brain
-          )
+        end
 
-          if not replanned then
-            M.abandon_waiting_assignment(workshop_data, assignment, blocked)
-            return "idle"
+        assignment.last_present_count = present
+        assignment.last_incoming_count = incoming
+
+        local stalled = game.tick - (assignment.last_progress_tick or game.tick)
+            >= C.WAITING_INPUT_RECHECK_TICKS
+
+        if stalled then
+          if #uncovered == 0 then
+            -- Required items are covered by incoming deliveries; keep waiting.
+            assignment.last_progress_tick = game.tick
+          else
+            local replanned, blocked = M.replan_waiting_assignment(
+              workshop_data,
+              assignment,
+              brain
+            )
+
+            if not replanned then
+              M.abandon_waiting_assignment(workshop_data, assignment, blocked)
+              return "idle"
+            end
           end
         end
       end
@@ -852,7 +894,7 @@ function M.tick_workshop_worker(workshop_data, brain)
   end
 
   if assignment.state == "settling_inputs" then
-    if not M.requester_has_exact_ingredients(requester, assignment.requests) then
+    if not M.requester_has_required_ingredients(requester, assignment.requests) then
       assignment.state = "waiting_inputs"
       assignment.settle_until = nil
       Status.set_finishing_status(workshop, assignment.item)

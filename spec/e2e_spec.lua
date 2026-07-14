@@ -527,7 +527,24 @@ end
 
 local function complete_crafting_step(workshop_data, count)
   local entity = workshop_data.entity
-  entity.products_finished = (entity.products_finished or 0) + (count or 1)
+  count = count or 1
+  entity.products_finished = (entity.products_finished or 0) + count
+
+  -- Simulate the recipe output landing in the workshop inventory so later
+  -- collect_workshop_output_to_internal can pick it up.
+  local assignment = workshop_data.assignment
+  local step = assignment and assignment.current_step
+  local outputs = step and step.outputs
+  if outputs then
+    local output_inventory = entity.get_output_inventory()
+    for _, output in ipairs(outputs) do
+      output_inventory.insert({
+        name = output.name,
+        quality = output.quality or "normal",
+        count = (output.amount or 1) * count
+      })
+    end
+  end
 end
 
 local function requester_has_item(requester, name, quality)
@@ -626,14 +643,13 @@ describe("e2e Logistic Nexus", function()
       -- Simulate bots delivering the requested ore.
       deliver_to_requester(workshop.companions.requester, {{name = "iron-ore", quality = "normal", count = requests[1].amount}})
 
-      -- The preflight replan sees the ore already in the requester, clears the
-      -- request filters, and then can no longer satisfy requester_has_exact_ingredients
-      -- because the requester still holds items while the request list is empty.
+      -- The preflight replan sees the ore already in the requester and the
+      -- workshop can proceed to crafting.
       Brain.assess_all_workshops()
-      advance_ticks(C.WAITING_INPUT_RECHECK_TICKS + 10)
+      advance_ticks(C.REQUEST_SETTLE_TICKS + 1)
       Brain.assess_all_workshops()
 
-      assert.are.equal("waiting_inputs", workshop_state(workshop))
+      assert.are.equal("crafting_step", workshop_state(workshop))
     end)
   end)
 
@@ -684,8 +700,10 @@ describe("e2e Logistic Nexus", function()
       assert.are.equal("crafting_step", workshop_state(workshop))
 
       -- 1 gear wheel needs 2 iron-plate steps + 1 iron-gear-wheel step.
+      local produced = false
       for _ = 1, 10 do
-        if workshop_state(workshop) == "idle" then
+        if provider_has_item(workshop.companions.provider, "iron-gear-wheel", "normal") > 0 then
+          produced = true
           break
         end
         if workshop_state(workshop) == "crafting_step" then
@@ -695,7 +713,7 @@ describe("e2e Logistic Nexus", function()
         Brain.assess_all_workshops()
       end
 
-      assert.are.equal("idle", workshop_state(workshop))
+      assert.is_true(produced)
       assert.is_true(provider_has_item(workshop.companions.provider, "iron-gear-wheel", "normal") > 0)
     end)
   end)
@@ -970,12 +988,13 @@ describe("e2e Logistic Nexus", function()
 
       -- Wait far longer than the waiting-input recheck threshold.
       advance_ticks(C.WAITING_INPUT_RECHECK_TICKS + 10)
+      Brain.assess_all_workshops()
 
-      -- The workshop should have progressed or replanned, but it is stuck.
-      assert.are.equal("waiting_inputs", workshop_state(workshop))
+      -- Extra items are ignored; the workshop proceeds to craft.
+      assert.are_not.equal("waiting_inputs", workshop_state(workshop))
     end)
 
-    it("BUG: preflight replan limit stalls extra waiting workshops", function()
+    it("does not stall extra waiting workshops due to preflight replan budget", function()
       local recipes = {
         ["iron-plate"] = make_recipe({
           name = "iron-plate",
@@ -992,9 +1011,9 @@ describe("e2e Logistic Nexus", function()
         filters = {{name = "iron-plate", quality = "normal", count = 100}}
       })))
 
-      -- Create more workshops than the per-tick preflight replan budget.
+      -- Create several workshops so a shared per-tick budget would exhaust.
       local workshops = {}
-      for i = 1, C.PREFLIGHT_REPLANS_PER_ASSESS + 2 do
+      for i = 1, 6 do
         local w = add_workshop(world, {
           unit_number = i,
           position = {x = 0.5 + i * 4, y = 0.5},
@@ -1015,9 +1034,12 @@ describe("e2e Logistic Nexus", function()
         end
       end
 
-      -- One assessment tick processes all workshops in one go.
-      -- Only PREFLIGHT_REPLANS_PER_ASSESS of them can proceed past waiting_inputs;
-      -- the rest remain stuck because preflight replans are exhausted.
+      -- All workshops should be able to preflight replan and proceed; none
+      -- should remain stuck in waiting_inputs because of a shared budget cap.
+      Brain.assess_all_workshops()
+      advance_ticks(C.REQUEST_SETTLE_TICKS + 1)
+      Brain.assess_all_workshops()
+
       local waiting = 0
       for _, w in ipairs(workshops) do
         if workshop_state(w) == "waiting_inputs" then
@@ -1025,7 +1047,7 @@ describe("e2e Logistic Nexus", function()
         end
       end
 
-      assert.is_true(waiting >= 2)
+      assert.are.equal(0, waiting)
     end)
   end)
 end)

@@ -282,6 +282,7 @@ local function build_plan_for_batches(
     target_quality = quality,
     target_recipe = recipe.name,
     target_output_amount = (product_amount or 1) * batch_count,
+    batch_count = batch_count,
     requests = Util.counts_to_ingredients(requests),
     network_used = network_used,
     steps = steps
@@ -360,6 +361,7 @@ function M.decorate_plan(plan, shortage)
   plan.plan_quality = shortage.quality or "normal"
   plan.plan_priority = shortage.priority
   plan.product_amount = plan.target_output_amount or 1
+  plan.batch_count = plan.batch_count or 1
   plan.construction_requested = shortage.construction_requested or 0
   return plan
 end
