@@ -223,4 +223,33 @@ describe("data-final-fixes category collection", function()
     assert.is_true(has_category(workshop, "pressing"))
     assert.is_true(has_category(workshop, "metallurgy"))
   end)
+
+  it("collects categories defined in set/map format", function()
+    -- Simulate a mod that defines crafting_categories as a set (keys = true).
+    data.raw.recipe["transport-belt"].category = nil
+    data.raw.recipe["transport-belt"].categories = nil
+    data.raw["assembling-machine"]["assembling-machine-3"].crafting_categories = {
+      crafting = true,
+      pressing = true
+    }
+
+    require("prototypes.entity")
+    require("data-final-fixes")
+
+    local workshop = data.raw["assembling-machine"]["logistic-nexus-workshop"]
+
+    local function has_category(entity, category)
+      for _, c in pairs(entity.crafting_categories or {}) do
+        if c == category then
+          return true
+        end
+      end
+      return false
+    end
+
+    assert.is_true(has_category(workshop, "crafting"),
+      "should collect set-key category 'crafting'")
+    assert.is_true(has_category(workshop, "pressing"),
+      "should collect set-key category 'pressing'")
+  end)
 end)

@@ -286,7 +286,8 @@ local function collect_categories(source, excluded_categories, categories)
   if type(source) == "string" and source ~= "" and not excluded_categories[source] then
     categories[source] = true
   elseif type(source) == "table" then
-    for _, category in pairs(source) do
+    for key, value in pairs(source) do
+      local category = type(key) == "string" and key or value
       collect_categories(category, excluded_categories, categories)
     end
   end
