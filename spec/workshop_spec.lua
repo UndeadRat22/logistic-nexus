@@ -362,7 +362,7 @@ describe("workshop job queueing", function()
 
       local state = Workshop.tick_workshop_worker(workshop_data, {})
 
-      assert.are.equal("busy", state)
+      assert.are.equal("working", state)
       assert.is_not_nil(workshop_data.assignment)
       assert.are.equal("copper-plate", workshop_data.current_item)
       assert.are.equal(5, workshop_data.current_product_amount)

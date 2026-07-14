@@ -12,6 +12,27 @@ local Network = require("scripts.network")
 local M = {}
 
 ------------------------------------------------------------
+-- STATE MACHINE
+------------------------------------------------------------
+
+-- All valid state transitions. If a transition isn't listed here,
+-- it's a bug. Read this table to understand the state graph.
+local VALID_TRANSITIONS = {
+  waiting_inputs  = { settling_inputs = true },
+  settling_inputs = { waiting_inputs = true, crafting_step = true, draining = true },
+  crafting_step   = { crafting_step = true, waiting_inputs = true, draining = true },
+  draining        = {},
+}
+
+local function transition_state(assignment, new_state)
+  local allowed = VALID_TRANSITIONS[assignment.state]
+  if not allowed or not allowed[new_state] then
+    error("invalid state transition: " .. (assignment.state or "nil") .. " -> " .. new_state)
+  end
+  assignment.state = new_state
+end
+
+------------------------------------------------------------
 -- OUTPUT CONTAINER OPERATIONS
 ------------------------------------------------------------
 
@@ -741,7 +762,7 @@ function M.refresh_assignment_plan_from_internal(
   workshop_data.current_recipe = nil
 
   if #(assignment.requests or {}) > 0 then
-    assignment.state = "waiting_inputs"
+    transition_state(assignment, "waiting_inputs")
     Status.set_finishing_status(workshop_data.entity, assignment.item)
     return "waiting", nil
   end
@@ -762,7 +783,7 @@ function M.start_next_internal_step(workshop_data, assignment)
     M.output_internal_inventory(workshop_data, assignment)
     M.set_workshop_recipe(workshop_data, nil)
     Status.destroy_goal_sprite(workshop_data)
-    assignment.state = "draining"
+    transition_state(assignment, "draining")
     Status.set_finishing_status(workshop, assignment.item)
     return true
   end
@@ -777,7 +798,7 @@ function M.start_next_internal_step(workshop_data, assignment)
 
   assignment.current_step_index = next_index
   assignment.current_step = step
-  assignment.state = "crafting_step"
+  transition_state(assignment, "crafting_step")
   assignment.baseline_products_finished = workshop.products_finished or 0
   assignment.recorded_products_finished = workshop.products_finished or 0
   assignment.step_target_finished = (workshop.products_finished or 0) + (step.crafts or 1)
@@ -812,6 +833,184 @@ function M.continue_assignment_after_internal_change(
 end
 
 ------------------------------------------------------------
+-- STATE HANDLERS
+-- Each handler processes one assignment.state and returns
+-- "idle", "working", or "invalid".
+------------------------------------------------------------
+
+local tick_waiting_inputs
+local tick_settling_inputs
+local tick_crafting_step
+local tick_draining
+
+local STATE_HANDLERS = {
+  waiting_inputs  = function(...) return tick_waiting_inputs(...) end,
+  settling_inputs = function(...) return tick_settling_inputs(...) end,
+  crafting_step   = function(...) return tick_crafting_step(...) end,
+  draining        = function(...) return tick_draining(...) end,
+}
+
+function tick_waiting_inputs(workshop_data, assignment, brain)
+  local workshop = workshop_data.entity
+  local requester = workshop_data.companions.requester
+
+  assignment.last_progress_tick = assignment.last_progress_tick or game.tick
+  assignment.last_present_count = assignment.last_present_count or 0
+  assignment.last_incoming_count = assignment.last_incoming_count or 0
+
+  if M.requester_has_exact_ingredients(requester, assignment.requests) then
+    if not assignment.preflight_replanned then
+      local replanned, blocked = M.replan_waiting_assignment(
+        workshop_data,
+        assignment,
+        brain,
+        brain.preflight_supply_budget
+      )
+
+      if not replanned then
+        M.abandon_waiting_assignment(workshop_data, assignment, blocked)
+        return "idle"
+      end
+
+      assignment.preflight_replanned = true
+    end
+
+    if M.requester_has_required_ingredients(requester, assignment.requests) then
+      transition_state(assignment, "settling_inputs")
+      assignment.settle_until = game.tick + C.REQUEST_SETTLE_TICKS
+    end
+    Status.set_finishing_status(workshop, assignment.item)
+  else
+    if M.requester_has_required_ingredients(requester, assignment.requests) then
+      -- All required items are present in the requester (extras are okay;
+      -- they will be moved to internal inventory and returned later).
+      transition_state(assignment, "settling_inputs")
+      assignment.settle_until = game.tick + C.REQUEST_SETTLE_TICKS
+    else
+      local present, incoming, uncovered = M.assignment_delivery_progress(
+        requester,
+        assignment.requests
+      )
+
+      if present > (assignment.last_present_count or 0)
+          or incoming > (assignment.last_incoming_count or 0) then
+        assignment.last_progress_tick = game.tick
+      end
+
+      assignment.last_present_count = present
+      assignment.last_incoming_count = incoming
+
+      local stalled = game.tick - (assignment.last_progress_tick or game.tick)
+          >= C.WAITING_INPUT_RECHECK_TICKS
+
+      if stalled then
+        if #uncovered == 0 then
+          -- Required items are covered by incoming deliveries; keep waiting.
+          assignment.last_progress_tick = game.tick
+        else
+          local replanned, blocked = M.replan_waiting_assignment(
+            workshop_data,
+            assignment,
+            brain
+          )
+
+          if not replanned then
+            M.abandon_waiting_assignment(workshop_data, assignment, blocked)
+            return "idle"
+          end
+        end
+      end
+    end
+
+    Status.set_finishing_status(workshop, assignment.item)
+  end
+
+  return "working"
+end
+
+function tick_settling_inputs(workshop_data, assignment, brain)
+  local workshop = workshop_data.entity
+  local requester = workshop_data.companions.requester
+
+  if not M.requester_has_required_ingredients(requester, assignment.requests) then
+    transition_state(assignment, "waiting_inputs")
+    assignment.settle_until = nil
+    Status.set_finishing_status(workshop, assignment.item)
+    return "working"
+  end
+
+  if game.tick >= (assignment.settle_until or game.tick) then
+    Companions.freeze_requester_batch(requester)
+    if M.move_requester_to_internal(workshop_data, assignment)
+        and M.continue_assignment_after_internal_change(
+          workshop_data,
+          assignment,
+          brain
+        ) then
+      Status.set_working_status(workshop, assignment.item, assignment.current_step_index or 1)
+    else
+      Status.set_blocked_status(workshop)
+    end
+  else
+    Status.set_finishing_status(workshop, assignment.item)
+  end
+
+  return "working"
+end
+
+function tick_crafting_step(workshop_data, assignment, brain)
+  local workshop = workshop_data.entity
+  local current_finished = workshop.products_finished or 0
+  local recorded_finished = assignment.recorded_products_finished
+      or assignment.baseline_products_finished or 0
+  local step_target = assignment.step_target_finished or (recorded_finished + 1)
+
+  if current_finished >= step_target then
+    assignment.recorded_products_finished = current_finished
+
+    if M.collect_workshop_output_to_internal(workshop_data, assignment)
+        and M.continue_assignment_after_internal_change(
+          workshop_data,
+          assignment,
+          brain
+        ) then
+      Status.set_working_status(workshop, assignment.item, assignment.current_step_index or 1)
+    else
+      Status.set_blocked_status(workshop)
+    end
+    return "working"
+  end
+
+  Status.set_working_status(workshop, assignment.item, assignment.current_step_index or 1)
+  return "working"
+end
+
+function tick_draining(workshop_data, assignment, brain)
+  local workshop = workshop_data.entity
+
+  if M.workshop_is_clear_for_reassessment(workshop_data) then
+    M.reset_workshop_assignment(workshop_data)
+
+    local next_job = workshop_data.job_queue and workshop_data.job_queue[1]
+    if next_job then
+      if M.start_job_now(workshop_data, next_job) then
+        table.remove(workshop_data.job_queue, 1)
+        return "working"
+      end
+
+      Status.set_blocked_status(workshop)
+      return "working"
+    end
+
+    Status.set_idle_status(workshop)
+    return "idle"
+  end
+
+  Status.set_finishing_status(workshop, assignment.item)
+  return "working"
+end
+
+------------------------------------------------------------
 -- WORKER TICKING
 ------------------------------------------------------------
 
@@ -825,7 +1024,7 @@ function M.tick_workshop_worker(workshop_data, brain)
   local requester = workshop_data.companions and workshop_data.companions.requester
   if not (requester and requester.valid) then
     Status.set_blocked_status(workshop)
-    return "busy"
+    return "working"
   end
 
   local assignment = workshop_data.assignment
@@ -833,158 +1032,14 @@ function M.tick_workshop_worker(workshop_data, brain)
     return "idle"
   end
 
-  if assignment.state == "waiting_inputs" then
-    assignment.last_progress_tick = assignment.last_progress_tick or game.tick
-    assignment.last_present_count = assignment.last_present_count or 0
-    assignment.last_incoming_count = assignment.last_incoming_count or 0
-
-    if M.requester_has_exact_ingredients(requester, assignment.requests) then
-      if not assignment.preflight_replanned then
-        local replanned, blocked = M.replan_waiting_assignment(
-          workshop_data,
-          assignment,
-          brain,
-          brain.preflight_supply_budget
-        )
-
-        if not replanned then
-          M.abandon_waiting_assignment(workshop_data, assignment, blocked)
-          return "idle"
-        end
-
-        assignment.preflight_replanned = true
-      end
-
-      if M.requester_has_required_ingredients(requester, assignment.requests) then
-        assignment.state = "settling_inputs"
-        assignment.settle_until = game.tick + C.REQUEST_SETTLE_TICKS
-      end
-      Status.set_finishing_status(workshop, assignment.item)
-    else
-      if M.requester_has_required_ingredients(requester, assignment.requests) then
-        -- All required items are present in the requester (extras are okay;
-        -- they will be moved to internal inventory and returned later).
-        assignment.state = "settling_inputs"
-        assignment.settle_until = game.tick + C.REQUEST_SETTLE_TICKS
-      else
-        local present, incoming, uncovered = M.assignment_delivery_progress(
-          requester,
-          assignment.requests
-        )
-
-        if present > (assignment.last_present_count or 0)
-            or incoming > (assignment.last_incoming_count or 0) then
-          assignment.last_progress_tick = game.tick
-        end
-
-        assignment.last_present_count = present
-        assignment.last_incoming_count = incoming
-
-        local stalled = game.tick - (assignment.last_progress_tick or game.tick)
-            >= C.WAITING_INPUT_RECHECK_TICKS
-
-        if stalled then
-          if #uncovered == 0 then
-            -- Required items are covered by incoming deliveries; keep waiting.
-            assignment.last_progress_tick = game.tick
-          else
-            local replanned, blocked = M.replan_waiting_assignment(
-              workshop_data,
-              assignment,
-              brain
-            )
-
-            if not replanned then
-              M.abandon_waiting_assignment(workshop_data, assignment, blocked)
-              return "idle"
-            end
-          end
-        end
-      end
-
-      Status.set_finishing_status(workshop, assignment.item)
-    end
-
-    return "busy"
+  local handler = STATE_HANDLERS[assignment.state]
+  if handler then
+    return handler(workshop_data, assignment, brain)
   end
 
-  if assignment.state == "settling_inputs" then
-    if not M.requester_has_required_ingredients(requester, assignment.requests) then
-      assignment.state = "waiting_inputs"
-      assignment.settle_until = nil
-      Status.set_finishing_status(workshop, assignment.item)
-      return "busy"
-    end
-
-    if game.tick >= (assignment.settle_until or game.tick) then
-      Companions.freeze_requester_batch(requester)
-      if M.move_requester_to_internal(workshop_data, assignment)
-          and M.continue_assignment_after_internal_change(
-            workshop_data,
-            assignment,
-            brain
-          ) then
-        Status.set_working_status(workshop, assignment.item, assignment.current_step_index or 1)
-      else
-        Status.set_blocked_status(workshop)
-      end
-    else
-      Status.set_finishing_status(workshop, assignment.item)
-    end
-
-    return "busy"
-  end
-
-  if assignment.state == "crafting_step" then
-    local current_finished = workshop.products_finished or 0
-    local recorded_finished = assignment.recorded_products_finished or assignment.baseline_products_finished or 0
-    local step_target = assignment.step_target_finished or (recorded_finished + 1)
-
-    if current_finished >= step_target then
-      assignment.recorded_products_finished = current_finished
-
-      if M.collect_workshop_output_to_internal(workshop_data, assignment)
-          and M.continue_assignment_after_internal_change(
-            workshop_data,
-            assignment,
-            brain
-          ) then
-        Status.set_working_status(workshop, assignment.item, assignment.current_step_index or 1)
-      else
-        Status.set_blocked_status(workshop)
-      end
-      return "busy"
-    end
-
-    Status.set_working_status(workshop, assignment.item, assignment.current_step_index or 1)
-    return "busy"
-  end
-
-  if assignment.state == "draining" then
-    if M.workshop_is_clear_for_reassessment(workshop_data) then
-      M.reset_workshop_assignment(workshop_data)
-
-      local next_job = workshop_data.job_queue and workshop_data.job_queue[1]
-      if next_job then
-        if M.start_job_now(workshop_data, next_job) then
-          table.remove(workshop_data.job_queue, 1)
-          return "busy"
-        end
-
-        Status.set_blocked_status(workshop)
-        return "busy"
-      end
-
-      Status.set_idle_status(workshop)
-      return "idle"
-    end
-
-    Status.set_finishing_status(workshop, assignment.item)
-    return "busy"
-  end
-
-  if workshop_data.assignment and workshop_data.assignment.internal_inventory then
-    M.output_internal_inventory(workshop_data, workshop_data.assignment)
+  -- Unknown state: output any internal inventory, reset, go idle.
+  if assignment.internal_inventory then
+    M.output_internal_inventory(workshop_data, assignment)
   end
   M.reset_workshop_assignment(workshop_data)
   return "idle"
