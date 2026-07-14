@@ -39,6 +39,9 @@ luac.out
 *.x86_64
 *.hex
 
+# macOS
+.DS_Store
+
 # Kimchi workspace files
 .kimchi/
 
