@@ -42,3 +42,6 @@ luac.out
 # Kimchi workspace files
 .kimchi/
 
+# Packaged mod releases
+releases/
+
