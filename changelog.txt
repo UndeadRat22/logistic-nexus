@@ -1,3 +1,16 @@
+Version: 1.1.0
+Date: 2026-07-14
+  Bugfixes:
+    - Fixed internal inventory being lost when abandoning, clearing, or resetting an assignment with an unknown state.
+    - Fixed construction reservations not releasing all alternative items_to_place_this entries.
+    - Fixed construction scan cache repeatedly restarting on networks with no construction area.
+    - Fixed stale upgrade-marked entity references after configuration changes.
+    - Fixed mod recipe categories defined in set/map format not being added to workshop crafting categories.
+  Changes:
+    - Resized mod thumbnail to 144x144 for Factorio mod portal compliance.
+    - Added release packaging target to Makefile.
+    - Cleaned up pre-release debug files and made Makefile tool paths overridable.
+
 Version: 1.0.0
 Date: 2026-07-14
   Features:
