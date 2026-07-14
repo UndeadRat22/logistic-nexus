@@ -1,8 +1,9 @@
 .PHONY: lint test test-and-lint package
 
-LUACHECK = /Users/rat/.luarocks/bin/luacheck
-LUA54 = /opt/homebrew/opt/lua@5.4/bin/lua5.4
-BUSTED = busted
+# Tool paths default to common locations; override with env vars or make args.
+LUACHECK ?= /Users/rat/.luarocks/bin/luacheck
+LUA54 ?= /opt/homebrew/opt/lua@5.4/bin/lua5.4
+BUSTED ?= busted
 
 VERSION := $(shell sed -n 's/.*"version": "\([^"]*\)".*/\1/p' info.json)
 MOD_NAME := logistic-nexus

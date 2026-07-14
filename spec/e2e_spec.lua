@@ -606,7 +606,7 @@ describe("e2e Logistic Nexus", function()
   end)
 
   describe("happy path single-step crafting", function()
-    it("BUG: preflight replan stalls the workshop after ingredients are delivered", function()
+    it("preflight replan proceeds after ingredients are delivered", function()
       local recipes = {
         ["iron-plate"] = make_recipe({
           name = "iron-plate",
@@ -1024,8 +1024,8 @@ describe("e2e Logistic Nexus", function()
     end)
   end)
 
-  describe("known bugs", function()
-    it("BUG: extra items in requester permanently stall waiting_inputs", function()
+  describe("previously fixed bugs", function()
+    it("extra items in requester do not permanently stall waiting_inputs", function()
       local recipes = {
         ["iron-plate"] = make_recipe({
           name = "iron-plate",
