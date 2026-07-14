@@ -195,13 +195,12 @@ function M.release_construction_reservation(network, name, quality, count)
   end
 end
 
-local function built_entity_place_item(entity)
+local function built_entity_place_items(entity)
   if not (entity and entity.valid and entity.prototype) then
     return nil
   end
 
-  local items_to_place = entity.prototype.items_to_place_this
-  return items_to_place and items_to_place[1] or nil
+  return entity.prototype.items_to_place_this
 end
 
 local function built_entity_quality(entity)
@@ -217,8 +216,8 @@ local function built_entity_quality(entity)
 end
 
 function M.release_built_entity_construction_reservations(entity)
-  local item = built_entity_place_item(entity)
-  if not item then
+  local items = built_entity_place_items(entity)
+  if not items then
     return
   end
 
@@ -229,12 +228,13 @@ function M.release_built_entity_construction_reservations(entity)
   end
 
   local quality = built_entity_quality(entity)
-  local count = item.count or 1
 
   for _, network in pairs(
     surface.find_logistic_networks_by_construction_area(entity.position, force) or {}
   ) do
-    M.release_construction_reservation(network, item.name, quality, count)
+    for _, item in pairs(items) do
+      M.release_construction_reservation(network, item.name, quality, item.count or 1)
+    end
     Storage.mark_network_schedule_dirty(network)
   end
 end

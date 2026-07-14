@@ -150,4 +150,78 @@ describe("construction reservations", function()
       assert.are.equal(3, storage.construction_reservations[key].count)
     end)
   end)
+
+  describe("release_built_entity_construction_reservations", function()
+    local Storage = require("scripts.storage")
+
+    before_each(function()
+      Storage.init_storage()
+      storage.construction_reservations = {}
+      game.tick = 0
+    end)
+
+    local function make_network(id)
+      return {
+        network_id = id,
+        valid = true,
+        force = {name = "player"}
+      }
+    end
+
+    it("releases reservations for all items_to_place_this entries", function()
+      local network = make_network(1)
+      local item_a_key = Util.construction_reservation_key(network, "item-a", "normal")
+      local item_b_key = Util.construction_reservation_key(network, "item-b", "normal")
+      storage.construction_reservations[item_a_key] = {count = 5, tick = 0}
+      storage.construction_reservations[item_b_key] = {count = 3, tick = 0}
+
+      local entity = {
+        valid = true,
+        quality = "normal",
+        prototype = {
+          items_to_place_this = {
+            {name = "item-a", count = 2},
+            {name = "item-b", count = 1}
+          }
+        },
+        surface = {
+          find_logistic_networks_by_construction_area = function()
+            return {network}
+          end
+        },
+        force = {name = "player"}
+      }
+
+      Construction.release_built_entity_construction_reservations(entity)
+
+      assert.are.equal(3, storage.construction_reservations[item_a_key].count)
+      assert.are.equal(2, storage.construction_reservations[item_b_key].count)
+    end)
+
+    it("releases a single item correctly", function()
+      local network = make_network(1)
+      local key = Util.construction_reservation_key(network, "iron-plate", "normal")
+      storage.construction_reservations[key] = {count = 5, tick = 0}
+
+      local entity = {
+        valid = true,
+        quality = "normal",
+        prototype = {
+          items_to_place_this = {
+            {name = "iron-plate", count = 5}
+          }
+        },
+        surface = {
+          find_logistic_networks_by_construction_area = function()
+            return {network}
+          end
+        },
+        force = {name = "player"}
+      }
+
+      Construction.release_built_entity_construction_reservations(entity)
+
+      assert.is_nil(storage.construction_reservations[key])
+    end)
+  end)
 end)
