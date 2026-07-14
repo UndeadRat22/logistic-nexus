@@ -480,6 +480,11 @@ function M.clear_workshop_job(workshop_data, status, metrics)
 end
 
 function M.reset_workshop_assignment(workshop_data)
+  local requester = workshop_data.companions and workshop_data.companions.requester
+  if requester and requester.valid then
+    Companions.clear_requester_requests(requester)
+  end
+
   workshop_data.assignment = nil
   workshop_data.current_item = nil
   workshop_data.current_quality = nil

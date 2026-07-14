@@ -387,6 +387,36 @@ describe("workshop job queueing", function()
       assert.are.equal("idle", state)
       assert.is_nil(workshop_data.assignment)
     end)
+
+    it("clears requester filters when draining completes and workshop goes idle", function()
+      local clear_called = false
+      Companions.clear_requester_requests = function()
+        clear_called = true
+      end
+
+      local entity = make_entity()
+      local workshop_data = make_workshop_data({
+        entity = entity,
+        assignment = {
+          state = "draining",
+          item = "iron-plate",
+          quality = "normal",
+          internal_inventory = {}
+        },
+        job_queue = {}
+      })
+
+      local state = Workshop.tick_workshop_worker(workshop_data, {})
+
+      assert.are.equal("idle", state)
+      assert.is_nil(workshop_data.assignment)
+      assert.is_true(clear_called,
+        "clear_requester_requests must be called when draining completes "
+          .. "to prevent stale requester filters from accumulating materials")
+
+      -- Restore the stub for other tests.
+      Companions.clear_requester_requests = function() end
+    end)
   end)
 end)
 
