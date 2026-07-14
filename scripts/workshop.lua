@@ -442,6 +442,11 @@ end
 function M.clear_workshop_job(workshop_data, status, metrics)
   local workshop = workshop_data.entity
   local requester = workshop_data.companions and workshop_data.companions.requester
+  local assignment = workshop_data.assignment
+
+  if assignment and assignment.internal_inventory then
+    M.output_internal_inventory(workshop_data, assignment)
+  end
 
   M.set_workshop_recipe(workshop_data, nil)
 
@@ -668,10 +673,14 @@ function M.replan_waiting_assignment(
   return true, nil
 end
 
-function M.abandon_waiting_assignment(workshop_data, _assignment, blocked)
+function M.abandon_waiting_assignment(workshop_data, assignment, blocked)
   local requester = workshop_data.companions and workshop_data.companions.requester
   if requester and requester.valid then
     Companions.clear_requester_requests(requester)
+  end
+
+  if assignment and assignment.internal_inventory then
+    M.output_internal_inventory(workshop_data, assignment)
   end
 
   workshop_data.last_blocked_reason = blocked and blocked.reason or "missing-material"

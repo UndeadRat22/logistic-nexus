@@ -390,6 +390,215 @@ describe("workshop job queueing", function()
   end)
 end)
 
+describe("abandon_waiting_assignment preserves internal inventory", function()
+  local Util = require("scripts.util")
+  local C = require("scripts.constants")
+
+  local function make_entity()
+    return {
+      valid = true,
+      name = C.WORKSHOP_NAME,
+      unit_number = 1,
+      position = {x = 0, y = 0},
+      products_finished = 0,
+      crafting_progress = 0,
+      get_recipe = function() return nil, nil end,
+      set_recipe = function() return {} end,
+      get_output_inventory = function()
+        return {
+          valid = true,
+          is_empty = function() return true end,
+          get_contents = function() return {} end
+        }
+      end,
+      insert = function() return 0 end,
+      surface = {spill_item_stack = function() end}
+    }
+  end
+
+  local function make_requester()
+    return {
+      valid = true,
+      name = C.REQUESTER_NAME,
+      get_inventory = function()
+        return {
+          valid = true,
+          is_empty = function() return true end,
+          get_contents = function() return {} end,
+          remove = function() return 0 end
+        }
+      end
+    }
+  end
+
+  local function make_provider_with_tracking()
+    local inserted = {}
+    local provider = {
+      valid = true,
+      name = C.PROVIDER_NAME,
+      insert = function(stack)
+        local key = Util.item_key(stack.name, stack.quality)
+        inserted[key] = (inserted[key] or 0) + (stack.count or 0)
+        return stack.count or 0
+      end
+    }
+    return provider, inserted
+  end
+
+  local function make_workshop_data(opts)
+    opts = opts or {}
+    return {
+      entity = opts.entity or make_entity(),
+      companions = opts.companions or {
+        requester = make_requester(),
+        provider = make_provider_with_tracking()
+      },
+      assignment = opts.assignment
+    }
+  end
+
+  it("outputs internal inventory items to provider before resetting", function()
+    local provider, inserted = make_provider_with_tracking()
+    local workshop_data = make_workshop_data({
+      companions = {provider = provider, requester = make_requester()}
+    })
+    local assignment = {
+      state = "waiting_inputs",
+      item = "iron-gear-wheel",
+      quality = "normal",
+      internal_inventory = {
+        ["iron-plate|normal"] = 10,
+        ["copper-plate|normal"] = 5
+      }
+    }
+    workshop_data.assignment = assignment
+
+    Workshop.abandon_waiting_assignment(workshop_data, assignment, {reason = "missing-material"})
+
+    assert.are.equal(10, inserted["iron-plate|normal"])
+    assert.are.equal(5, inserted["copper-plate|normal"])
+    assert.is_nil(workshop_data.assignment)
+  end)
+
+  it("handles empty internal inventory gracefully", function()
+    local provider, inserted = make_provider_with_tracking()
+    local workshop_data = make_workshop_data({
+      companions = {provider = provider, requester = make_requester()}
+    })
+    local assignment = {
+      state = "waiting_inputs",
+      item = "iron-gear-wheel",
+      quality = "normal",
+      internal_inventory = {}
+    }
+    workshop_data.assignment = assignment
+
+    Workshop.abandon_waiting_assignment(workshop_data, assignment, {reason = "missing-material"})
+
+    assert.is_nil(workshop_data.assignment)
+    local count = 0
+    for _ in pairs(inserted) do count = count + 1 end
+    assert.are.equal(0, count)
+  end)
+end)
+
+describe("clear_workshop_job preserves internal inventory", function()
+  local Util = require("scripts.util")
+  local C = require("scripts.constants")
+
+  local function make_entity()
+    return {
+      valid = true,
+      name = C.WORKSHOP_NAME,
+      unit_number = 1,
+      position = {x = 0, y = 0},
+      products_finished = 0,
+      crafting_progress = 0,
+      get_recipe = function() return nil, nil end,
+      set_recipe = function() return {} end,
+      get_output_inventory = function()
+        return {
+          valid = true,
+          is_empty = function() return true end,
+          get_contents = function() return {} end
+        }
+      end,
+      insert = function() return 0 end,
+      surface = {spill_item_stack = function() end}
+    }
+  end
+
+  local function make_requester()
+    return {
+      valid = true,
+      name = C.REQUESTER_NAME,
+      get_inventory = function()
+        return {
+          valid = true,
+          is_empty = function() return true end,
+          get_contents = function() return {} end,
+          remove = function() return 0 end
+        }
+      end
+    }
+  end
+
+  local function make_provider_with_tracking()
+    local inserted = {}
+    local provider = {
+      valid = true,
+      name = C.PROVIDER_NAME,
+      insert = function(stack)
+        local key = Util.item_key(stack.name, stack.quality)
+        inserted[key] = (inserted[key] or 0) + (stack.count or 0)
+        return stack.count or 0
+      end
+    }
+    return provider, inserted
+  end
+
+  local function make_workshop_data(opts)
+    opts = opts or {}
+    return {
+      entity = opts.entity or make_entity(),
+      companions = opts.companions or {
+        requester = make_requester(),
+        provider = make_provider_with_tracking()
+      },
+      assignment = opts.assignment
+    }
+  end
+
+  it("outputs internal inventory items to provider before clearing", function()
+    local provider, inserted = make_provider_with_tracking()
+    local workshop_data = make_workshop_data({
+      companions = {provider = provider, requester = make_requester()}
+    })
+    local assignment = {
+      state = "crafting_step",
+      item = "iron-gear-wheel",
+      quality = "normal",
+      internal_inventory = {
+        ["iron-plate|normal"] = 8
+      }
+    }
+    workshop_data.assignment = assignment
+
+    Workshop.clear_workshop_job(workshop_data, "no-network")
+
+    assert.are.equal(8, inserted["iron-plate|normal"])
+    assert.are.same({}, assignment.internal_inventory)
+  end)
+
+  it("handles nil assignment gracefully", function()
+    local workshop_data = make_workshop_data()
+
+    Workshop.clear_workshop_job(workshop_data, "no-network")
+
+    assert.is_nil(workshop_data.assignment)
+  end)
+end)
+
 describe("brain active assignment accounting with queues", function()
   local Brain = require("scripts.brain")
 
