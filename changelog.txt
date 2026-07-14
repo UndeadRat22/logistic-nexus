@@ -1,3 +1,14 @@
+Version: 1.0.0
+Date: 2026-07-14
+  Features:
+    - Official 1.0 release.
+    - Added batch-crafting support with configurable max batches per job.
+    - Added comprehensive status GUI and console commands.
+    - Added circuit-network controls for blocking items and limiting product variety.
+    - Added flying-text alerts for blocked crafts.
+    - Added Logistic Nexus workshop MK2 upgrade.
+    - Added automatic barrelled recipe generation for fluid recipes.
+
 Version: 0.1.8
 Date: 2026-07-08
   Changes:
