@@ -17,17 +17,23 @@ describe("planner", function()
   end
 
   local function make_recipe(opts)
+    local categories = opts.categories or (opts.category and {opts.category}) or {"crafting"}
     return {
       name = opts.name,
       valid = true,
       enabled = opts.enabled ~= false,
       hidden = opts.hidden or false,
-      category = opts.category or "crafting",
+      categories = categories,
       energy = opts.energy or 1,
       products = opts.products or {{type = "item", name = opts.name, amount = 1}},
       ingredients = opts.ingredients or {},
       has_category = function(cat)
-        return (opts.category or "crafting") == cat
+        for _, c in ipairs(categories) do
+          if c == cat then
+            return true
+          end
+        end
+        return false
       end
     }
   end

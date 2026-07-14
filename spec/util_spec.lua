@@ -96,6 +96,14 @@ describe("util", function()
       assert.is_nil(Util.fixed_product_amount({amount = 5, probability = 0.5}))
     end)
 
+    it("returns nil when independent_probability is less than 1", function()
+      assert.is_nil(Util.fixed_product_amount({amount = 5, independent_probability = 0.5}))
+    end)
+
+    it("returns amount when independent_probability is guaranteed", function()
+      assert.are.equal(5, Util.fixed_product_amount({amount = 5, independent_probability = 1}))
+    end)
+
     it("returns amount when probability is guaranteed", function()
       assert.are.equal(5, Util.fixed_product_amount({amount = 5, probability = 1}))
     end)
@@ -108,6 +116,14 @@ describe("util", function()
 
     it("returns nil when probability is less than 1", function()
       assert.is_nil(Util.fixed_ingredient_amount({amount = 3, probability = 0.5}))
+    end)
+
+    it("returns nil when independent_probability is less than 1", function()
+      assert.is_nil(Util.fixed_ingredient_amount({amount = 3, independent_probability = 0.5}))
+    end)
+
+    it("returns amount when independent_probability is guaranteed", function()
+      assert.are.equal(3, Util.fixed_ingredient_amount({amount = 3, independent_probability = 1}))
     end)
 
     it("returns amount when probability is guaranteed", function()

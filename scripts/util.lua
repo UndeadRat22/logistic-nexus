@@ -46,10 +46,22 @@ end
 -- AMOUNT HELPERS
 ------------------------------------------------------------
 
+function M.probability_of(entry)
+  return entry.independent_probability
+      or entry.shared_probability
+      or entry.probability
+end
+
 function M.fixed_product_amount(product)
+  if not product then
+    return nil
+  end
+
+  local probability = M.probability_of(product)
+
   if product.amount
       and product.amount > 0
-      and (not product.probability or product.probability == 1) then
+      and (not probability or probability == 1) then
     return product.amount
   end
 
@@ -57,10 +69,15 @@ function M.fixed_product_amount(product)
 end
 
 function M.fixed_ingredient_amount(ingredient)
-  if ingredient
-      and ingredient.amount
+  if not ingredient then
+    return nil
+  end
+
+  local probability = M.probability_of(ingredient)
+
+  if ingredient.amount
       and ingredient.amount > 0
-      and (not ingredient.probability or ingredient.probability == 1)
+      and (not probability or probability == 1)
       and not ingredient.amount_min
       and not ingredient.amount_max then
     return ingredient.amount

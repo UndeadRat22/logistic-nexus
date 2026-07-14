@@ -463,7 +463,7 @@ local function insert_modules_into_workshop(workshop, items)
   end
 
   local ok, module_inventory = pcall(function()
-    return workshop.get_inventory(defines.inventory.assembling_machine_modules)
+    return workshop.get_inventory(defines.inventory.crafter_modules)
   end)
 
   if not ok or not (module_inventory and module_inventory.valid) then

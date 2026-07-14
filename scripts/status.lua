@@ -5,6 +5,23 @@ local C = require("scripts.constants")
 
 local M = {}
 
+local function disable_entity(entity)
+  if not (entity and entity.valid) then
+    return
+  end
+
+  -- 2.1 removed LuaEntity::active write; use disabled_by_script when available.
+  local ok = pcall(function()
+    entity.disabled_by_script = true
+  end)
+
+  if not ok then
+    pcall(function()
+      entity.active = false
+    end)
+  end
+end
+
 ------------------------------------------------------------
 -- STATUS
 ------------------------------------------------------------
@@ -187,7 +204,7 @@ function M.set_goal_sprite(workshop_data, item_name, recipe_name, quality)
     })
     if map_display and map_display.valid then
       map_display.set_recipe(recipe_name, quality)
-      map_display.active = false
+      disable_entity(map_display)
     end
   end)
 
@@ -200,7 +217,7 @@ function M.set_goal_sprite(workshop_data, item_name, recipe_name, quality)
     })
     if world_display and world_display.valid then
       world_display.set_recipe(recipe_name, quality)
-      world_display.active = false
+      disable_entity(world_display)
     end
   end)
 

@@ -3,10 +3,10 @@
   "version": "1.2.0",
   "title": "Logistic Nexus",
   "author": "Valdas Rakutis (deadrat22), based on AG Mall by Andriy",
-  "factorio_version": "2.0",
+  "factorio_version": "2.1",
   "dependencies": [
-    "base >= 2.0",
-    "(?) space-age >= 2.0"
+    "base >= 2.1",
+    "(?) space-age >= 2.1"
   ],
   "description": "A compact logistics-aware mall that detects shortages, requests materials, crafts intermediate components internally, and supplies finished products to the logistic network."
 }

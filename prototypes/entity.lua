@@ -52,6 +52,8 @@ workshop.graphics_set.animation.layers[1].filename =
   "__logistic-nexus__/graphics/entity/logistic-nexus/logistic-nexus.png"
 workshop.graphics_set.animation.layers[1].width = 278
 workshop.graphics_set.animation.layers[1].height = 290
+workshop.graphics_set.animation.layers[1].frame_count = 32
+workshop.graphics_set.animation.layers[1].line_length = 8
 workshop.graphics_set.animation.layers[1].shift = util.by_pixel(0, 2)
 workshop.graphics_set.animation.layers[2].filename =
   "__logistic-nexus__/graphics/entity/logistic-nexus/logistic-nexus-shadow.png"

@@ -5,8 +5,8 @@ local helpers = require("spec.helpers")
 
 helpers.install_globals()
 
--- The workshop module touches the assembling-machine module inventory.
-_G.defines.inventory.assembling_machine_modules = "assembling_machine_modules"
+-- The workshop module touches the crafter module inventory.
+_G.defines.inventory.crafter_modules = "crafter_modules"
 
 local C = require("scripts.constants")
 local Util = require("scripts.util")
@@ -371,19 +371,23 @@ end
 
 local function make_recipe(opts)
   opts = opts or {}
-  local category = opts.category or "crafting"
+  local categories = opts.categories or (opts.category and {opts.category}) or {"crafting"}
   return {
     name = opts.name,
     valid = true,
     enabled = opts.enabled ~= false,
     hidden = opts.hidden or false,
-    category = category,
+    categories = categories,
     energy = opts.energy or 1,
     ingredients = opts.ingredients or {},
     products = opts.products or {{type = "item", name = opts.name, amount = 1}},
     has_category = function(cat)
-      local cats = opts.categories or {[category] = true}
-      return cats[cat] == true
+      for _, c in ipairs(categories) do
+        if c == cat then
+          return true
+        end
+      end
+      return false
     end
   }
 end

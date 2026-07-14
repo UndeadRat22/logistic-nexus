@@ -45,7 +45,8 @@ local function build_plan_for_batches(
   end
 
   log_trace(0, "Recipe: " .. recipe.name
-      .. " (category: " .. tostring(recipe.category)
+      .. " (categories: "
+      .. (recipe.categories and table.concat(recipe.categories, ", ") or tostring(recipe.category))
       .. ", produces: " .. tostring(product_amount) .. ")")
 
   local root_ingredients = Recipes.aggregate_recipe_ingredients(recipe, batch_count, quality)
@@ -178,7 +179,8 @@ local function build_plan_for_batches(
     trail[key] = true
     local craft_count = math.ceil(amount / child_product_amount)
     log_trace(level, "Craft using " .. child_recipe.name
-        .. " (category: " .. tostring(child_recipe.category)
+        .. " (categories: "
+        .. (child_recipe.categories and table.concat(child_recipe.categories, ", ") or tostring(child_recipe.category))
         .. ", produces: " .. tostring(child_product_amount) .. ")")
     log_trace(level, "Craft count: " .. craft_count)
     local produced = {}

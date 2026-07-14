@@ -17,7 +17,9 @@ local function normalize_ingredient(ingredient)
   return {
     type = ingredient.type or "item",
     name = ingredient.name or ingredient[1],
-    amount = ingredient.amount or ingredient[2] or 1
+    amount = ingredient.amount or ingredient[2] or 1,
+    independent_probability = ingredient.independent_probability,
+    probability = ingredient.probability
   }
 end
 
@@ -26,10 +28,18 @@ local function normalize_product(product)
     type = product.type or "item",
     name = product.name or product[1],
     amount = product.amount or product[2] or 1,
+    independent_probability = product.independent_probability,
+    shared_probability = product.shared_probability,
     probability = product.probability,
     amount_min = product.amount_min,
     amount_max = product.amount_max
   }
+end
+
+local function has_probability(product)
+  return product.independent_probability
+      or product.shared_probability
+      or product.probability
 end
 
 local function recipe_ingredients(recipe)
@@ -71,7 +81,7 @@ local function fixed_item_products(recipe)
     if normalized.type ~= "item"
         or not normalized.name
         or not normalized.amount
-        or normalized.probability
+        or has_probability(normalized)
         or normalized.amount_min
         or normalized.amount_max then
       return nil
@@ -136,6 +146,10 @@ local function make_barrelled_recipe(recipe)
     local normalized = normalize_ingredient(ingredient)
 
     if not normalized.name or not normalized.amount then
+      return nil
+    end
+
+    if has_probability(normalized) then
       return nil
     end
 
@@ -236,7 +250,7 @@ local function make_barrelled_recipe(recipe)
     hide_from_stats = true,
     allow_decomposition = false,
     allow_productivity = false,
-    category = "crafting",
+    categories = {"crafting"},
     energy_required = (recipe.energy_required or 0.5) * batch_multiplier,
     ingredients = ingredients,
     results = results,
@@ -310,9 +324,16 @@ local function apply_category_collection(entity_name)
   collect_categories(workshop.crafting_categories, excluded_categories, categories)
 
   -- Collect primary and alternate categories from every recipe.
+  -- In 2.1 recipe prototypes only have `categories`; in 2.0 they may use the
+  -- singular `category`. Prefer `categories` and fall back to `category`.
   for _, recipe in pairs(data.raw.recipe) do
-    collect_categories(recipe.category or "crafting", excluded_categories, categories)
-    collect_categories(recipe.categories, excluded_categories, categories)
+    if recipe.categories then
+      collect_categories(recipe.categories, excluded_categories, categories)
+    elseif recipe.category then
+      collect_categories(recipe.category, excluded_categories, categories)
+    else
+      collect_categories("crafting", excluded_categories, categories)
+    end
   end
 
   -- Inherit categories from the base assembling machine, which Space Age and

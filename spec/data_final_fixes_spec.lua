@@ -47,7 +47,7 @@ describe("data-final-fixes category collection", function()
   end)
 
   it("collects alternate recipe categories", function()
-    data.raw.recipe["transport-belt"].category = "crafting"
+    data.raw.recipe["transport-belt"].categories = {"crafting"}
     data.raw.recipe["transport-belt"].categories = {"crafting", "pressing"}
 
     require("prototypes.entity")
@@ -77,7 +77,7 @@ describe("data-final-fixes category collection", function()
 
   it("collects categories defined in set/map format", function()
     -- Simulate a mod that defines crafting_categories as a set (keys = true).
-    data.raw.recipe["transport-belt"].category = nil
+    data.raw.recipe["transport-belt"].categories = nil
     data.raw.recipe["transport-belt"].categories = nil
     data.raw["assembling-machine"]["assembling-machine-3"].crafting_categories = {
       crafting = true,

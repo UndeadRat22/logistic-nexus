@@ -51,6 +51,16 @@ describe("recipes", function()
       assert.is_nil(Recipes.recipe_product_amount(recipe, "iron-plate"))
     end)
 
+    it("returns nil when product has independent_probability", function()
+      local recipe = {
+        name = "some-recipe",
+        products = {
+          {type = "item", name = "iron-plate", amount = 2, independent_probability = 0.5}
+        }
+      }
+      assert.is_nil(Recipes.recipe_product_amount(recipe, "iron-plate"))
+    end)
+
     it("returns nil when product has amount_min", function()
       local recipe = {
         name = "some-recipe",
@@ -114,6 +124,15 @@ describe("recipes", function()
       local recipe = {
         ingredients = {
           {type = "item", name = "iron-ore", amount = 1, probability = 0.5}
+        }
+      }
+      assert.is_nil(Recipes.recipe_item_ingredients(recipe))
+    end)
+
+    it("returns nil when ingredient has independent_probability", function()
+      local recipe = {
+        ingredients = {
+          {type = "item", name = "iron-ore", amount = 1, independent_probability = 0.5}
         }
       }
       assert.is_nil(Recipes.recipe_item_ingredients(recipe))

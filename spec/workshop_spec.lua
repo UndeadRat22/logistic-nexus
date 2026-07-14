@@ -289,7 +289,7 @@ describe("workshop job queueing", function()
       local output_inserted = {}
       local entity = make_entity()
       entity.get_inventory = function(inv)
-        if inv == defines.inventory.assembling_machine_modules then
+        if inv == defines.inventory.crafter_modules then
           return module_inventory
         end
         return nil

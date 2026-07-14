@@ -315,3 +315,4 @@ function M.sync_barrelled_recipes(force, options)
 end
 
 return M
+
