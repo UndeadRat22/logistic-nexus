@@ -766,6 +766,7 @@ function M.start_next_internal_step(workshop_data, assignment)
   assignment.state = "crafting_step"
   assignment.baseline_products_finished = workshop.products_finished or 0
   assignment.recorded_products_finished = workshop.products_finished or 0
+  assignment.step_target_finished = (workshop.products_finished or 0) + (step.crafts or 1)
   workshop_data.current_recipe = step.recipe_name
   Status.set_working_status(workshop, assignment.item, next_index)
   return true
@@ -923,8 +924,9 @@ function M.tick_workshop_worker(workshop_data, brain)
   if assignment.state == "crafting_step" then
     local current_finished = workshop.products_finished or 0
     local recorded_finished = assignment.recorded_products_finished or assignment.baseline_products_finished or 0
+    local step_target = assignment.step_target_finished or (recorded_finished + 1)
 
-    if current_finished > recorded_finished then
+    if current_finished >= step_target then
       assignment.recorded_products_finished = current_finished
 
       if M.collect_workshop_output_to_internal(workshop_data, assignment)

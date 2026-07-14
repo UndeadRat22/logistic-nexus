@@ -653,6 +653,78 @@ describe("e2e Logistic Nexus", function()
     end)
   end)
 
+  describe("batch crafting", function()
+    it("crafts the largest feasible batch up to the configured limit", function()
+      _G.settings.global["logistic-nexus-max-batches-per-job"].value = 10
+
+      local recipes = {
+        ["iron-plate"] = make_recipe({
+          name = "iron-plate",
+          ingredients = {{type = "item", name = "iron-ore", amount = 1}}
+        })
+      }
+      local world = setup_game({recipes = recipes, supply = {}})
+      -- Only 9 ore are available, so even though max-batches is 10 the planner
+      -- must cap the batch at 9 and craft exactly 9 plates.
+      add_network_supply(world.network, {{name = "iron-ore", quality = "normal", count = 9}})
+
+      table.insert(world.network.requester_points, (make_requester_entity({
+        position = {x = 100, y = 100},
+        force = world.force,
+        surface = world.surface,
+        filters = {{name = "iron-plate", quality = "normal", count = 9}}
+      })))
+
+      local workshop = add_workshop(world, {
+        unit_number = 1,
+        position = {x = 0.5, y = 0.5},
+        recipes = recipes
+      })
+
+      Brain.assess_all_workshops()
+
+      assert.are.equal("iron-plate", workshop_target(workshop))
+      assert.are.equal("waiting_inputs", workshop_state(workshop))
+
+      local requests = workshop_requests(workshop)
+      assert.are.equal(1, #requests)
+      assert.are.equal("iron-ore", requests[1].name)
+      assert.are.equal(9, requests[1].amount)
+
+      deliver_to_requester(workshop.companions.requester, {
+        {name = "iron-ore", quality = "normal", count = 9}
+      })
+
+      force_brain_reschedule(world)
+      Brain.assess_all_workshops()
+      advance_ticks(C.REQUEST_SETTLE_TICKS + 1)
+      force_brain_reschedule(world)
+      Brain.assess_all_workshops()
+
+      assert.are.equal("crafting_step", workshop_state(workshop))
+
+      for _ = 1, 25 do
+        if workshop_state(workshop) == "idle" then
+          break
+        end
+        if workshop_state(workshop) == "crafting_step" then
+          complete_crafting_step(workshop, 1)
+        end
+        force_brain_reschedule(world)
+        Brain.assess_all_workshops()
+      end
+
+      -- Exactly 9 plates were crafted from the 9 ore that were available.
+      assert.are.equal(9, provider_has_item(workshop.companions.provider, "iron-plate", "normal"))
+      -- No input resources should remain in requester or provider.
+      assert.are.equal(0, requester_has_item(workshop.companions.requester, "iron-ore", "normal"))
+      assert.are.equal(0, provider_has_item(workshop.companions.provider, "iron-ore", "normal"))
+      -- The batch finished; the workshop is waiting for more ore only because
+      -- the mock network does not count the provider's plates as supply.
+      assert.are_not.equal("crafting_step", workshop_state(workshop))
+    end)
+  end)
+
   describe("multi-step internal crafting", function()
     it("crafts intermediates internally and only requests leaves from the network", function()
       local recipes = {

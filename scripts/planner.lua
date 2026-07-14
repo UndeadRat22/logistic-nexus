@@ -214,7 +214,8 @@ local function build_plan_for_batches(
         recipe_name = child_recipe.name,
         ingredients = child_ingredients,
         outputs = child_outputs,
-        product_amount = child_product_amount
+        product_amount = child_product_amount,
+        crafts = 1
       })
 
       for _, output in pairs(child_outputs) do
@@ -274,7 +275,8 @@ local function build_plan_for_batches(
     recipe_name = recipe.name,
     ingredients = root_ingredients,
     outputs = root_outputs,
-    product_amount = product_amount * batch_count
+    product_amount = product_amount * batch_count,
+    crafts = batch_count
   })
 
   return {
