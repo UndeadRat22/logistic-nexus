@@ -56,3 +56,6 @@ package-lock.json
 # factorio-test CLI working directory
 factorio-test-data-dir/
 
+# Desloppify workspace
+.desloppify/
+

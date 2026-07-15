@@ -22,9 +22,9 @@ test:
 
 test-real:
 	ifeq ($(FACTORIO_PATH),)
-		npx factorio-test run -p .
+		npx factorio-test run -p . --mods quality
 	else
-		npx factorio-test run -p . --factorio-path $(FACTORIO_PATH)
+		npx factorio-test run -p . --factorio-path $(FACTORIO_PATH) --mods quality
 	endif
 
 test-and-lint: test lint
