@@ -9,6 +9,7 @@ local Construction = require("scripts.construction")
 local Companions = require("scripts.companions") -- luacheck: ignore
 local Brain = require("scripts.brain")
 local Registration = require("scripts.registration")
+local DebugCommands = require("scripts.debug_commands")
 local Gui = require("scripts.gui")
 
 local M = {}
@@ -242,7 +243,7 @@ function M.register_events()
       item_name = "concrete"
     end
 
-    Registration.debug_mall_item(player, item_name)
+    DebugCommands.debug_mall_item(player, item_name)
   end)
 
   commands.add_command("logistic-nexus-debug-construction", "Print Logistic Nexus construction ghost debug for an item, for example: /logistic-nexus-debug-construction express-transport-belt", function(command)
@@ -259,11 +260,11 @@ function M.register_events()
       return
     end
 
-    Registration.debug_construction_item(player, item_name)
+    DebugCommands.debug_construction_item(player, item_name)
   end)
 
   commands.add_command("logistic-nexus-status", "Print the latest Logistic Nexus network allocation analysis", function(command)
-    Registration.debug_status(command)
+    DebugCommands.debug_status(command)
   end)
 
   commands.add_command("logistic-nexus-gui", "Open the Logistic Nexus status GUI", function(command)
