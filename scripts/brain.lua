@@ -173,7 +173,10 @@ function M.choose_independent_job(brain, workshop_data, network, candidates, sup
     for _, candidate in ipairs(candidates) do
       if candidate.remaining_units > 0
           and not skipped[candidate.key]
-          and not controls.excluded_items[candidate.shortage.name] then
+          and not controls.excluded_items[candidate.shortage.name]
+          and (not workshop_data.last_blocked_item
+              or workshop_data.last_blocked_item ~= candidate.shortage.name
+              or game.tick - (workshop_data.last_blocked_tick or 0) > 3600) then
         table.insert(window, candidate)
         if #window >= controls.product_limit then
           break

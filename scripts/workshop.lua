@@ -713,6 +713,7 @@ function M.abandon_waiting_assignment(workshop_data, assignment, blocked)
 
   workshop_data.last_blocked_reason = blocked and blocked.reason or "missing-material"
   workshop_data.last_blocked_item = blocked and blocked.item or nil
+  workshop_data.last_blocked_tick = game.tick
   M.reset_workshop_assignment(workshop_data)
   Status.set_idle_status(workshop_data.entity)
 end
@@ -983,19 +984,20 @@ function tick_crafting_step(workshop_data, assignment, brain)
     return "working"
   end
 
-  -- Stall detection: if products_finished hasn't increased for a
-  -- while, the workshop is stuck. Abandon the assignment entirely so
-  -- the brain can reassign to a different item.
-  local CRAFTING_STALL_TICKS = 1200
-  local current_finished = workshop.products_finished or 0
-  assignment.last_products_check = assignment.last_products_check or current_finished
-  assignment.product_stall_tick = assignment.product_stall_tick or game.tick
+  -- Stall detection: if the step index hasn't advanced for a while,
+  -- the workshop is stuck producing intermediate items without
+  -- completing the final product. This happens when supply fluctuates
+  -- and the workshop keeps crafting partial intermediates.
+  local CRAFTING_STALL_TICKS = 2400  -- 40 seconds at normal speed
+  local current_step = assignment.current_step_index or 0
+  assignment.last_step_check = assignment.last_step_check or current_step
+  assignment.step_stall_tick = assignment.step_stall_tick or game.tick
 
-  if current_finished > assignment.last_products_check then
-    assignment.last_products_check = current_finished
-    assignment.product_stall_tick = game.tick
-  elseif game.tick - assignment.product_stall_tick >= CRAFTING_STALL_TICKS then
-    M.abandon_waiting_assignment(workshop_data, assignment, {reason = "crafting-stall"})
+  if current_step ~= assignment.last_step_check then
+    assignment.last_step_check = current_step
+    assignment.step_stall_tick = game.tick
+  elseif game.tick - assignment.step_stall_tick >= CRAFTING_STALL_TICKS then
+    M.abandon_waiting_assignment(workshop_data, assignment, {reason = "crafting-stall", item = assignment.item})
     return "idle"
   end
 
