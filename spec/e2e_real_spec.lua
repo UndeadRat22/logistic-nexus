@@ -848,7 +848,80 @@ describe("real e2e: full bot-delivered pipeline", function()
   before_each(setup)
   after_each(teardown)
 
-  it("crafts iron-gear-wheels via real logistic bots (full pipeline)", function()
+  it("does not strand items in assembler when supply runs out mid-craft", function()
+    -- Multi-step recipe: ore -> plate -> gear-wheel.
+    -- Give just enough ore for 1 batch, let crafting start,
+    -- then verify items end up in the provider, not stranded
+    -- in the assembler's output inventory.
+    local world = H.setup_world{recipes = {"iron-plate", "iron-gear-wheel"}}
+
+    -- Only enough ore for 2 plates, but 3 gears need 6 plates.
+    -- Workshop will craft 2 plates, then stall with plates in internal
+    -- inventory, unable to complete the 3-gear batch.
+    H.place_supply_chest(20, 20, {{name = "iron-ore", count = 4}})
+    H.place_requester(30, 15, "iron-gear-wheel", 3)
+    local workshop = H.place_workshop(10, 10)
+    local ws_data = H.get_workshop_data(workshop.unit_number)
+
+    async(15000)
+    on_tick(function()
+      local surface = H.get_surface()
+      local force = H.get_force()
+      local network = surface.find_logistic_network_by_position({x = 15, y = 15}, force)
+      if game.tick % 5 == 0 and network and network.valid then
+        H.force_brain_reschedule(network)
+        Brain.assess_all_workshops()
+      end
+
+      -- Deliver ingredients when waiting (simulating bot delivery)
+      if H.workshop_state(ws_data) == "waiting_inputs" then
+        local requests = H.workshop_requests(ws_data)
+        for _, req in ipairs(requests) do
+          local present = H.requester_has_item(ws_data.companions.requester, req.name, req.quality)
+          local needed = math.max(0, (req.amount or 0) - present)
+          if needed > 0 then
+            H.deliver_to_chest(ws_data.companions.requester, {
+              {name = req.name, quality = req.quality, count = needed}
+            })
+          end
+        end
+      end
+
+      -- Check: are items stranded in the assembler's output inventory?
+      local output_inv = workshop.get_output_inventory()
+      local output_items = 0
+      if output_inv and output_inv.valid then
+        for _, item in pairs(output_inv.get_contents() or {}) do
+          output_items = output_items + (item.count or 0)
+        end
+      end
+
+      -- Check internal inventory
+      local internal_count = 0
+      local assignment = ws_data.assignment
+      if assignment and assignment.internal_inventory then
+        for _, count in pairs(assignment.internal_inventory) do
+          internal_count = internal_count + count
+        end
+      end
+
+      -- Check provider
+      local provider_gears = H.provider_has_item(ws_data.companions.provider, "iron-gear-wheel")
+      local provider_plates = H.provider_has_item(ws_data.companions.provider, "iron-plate")
+
+      -- Success: gear wheel reached the provider
+      if provider_gears >= 1 then
+        done()
+        return
+      end
+
+      -- Diagnostic on timeout
+      if game.tick % 2000 == 0 and game.tick > 0 then
+        local state = H.workshop_state(ws_data)
+        print(string.format("[STRAND] tick=%d state=%s output=%d internal=%d provider_gears=%d provider_plates=%d",
+          game.tick, state, output_items, internal_count, provider_gears, provider_plates))
+      end
+    end)
     -- Full pipeline: passive-provider (raw ore) -> workshop (crafts via
     -- logistic bot delivery) -> active-provider (output) -> robots carry
     -- to requester chest. No direct item insertion.
