@@ -839,3 +839,61 @@ describe("real e2e: parallel workshops", function()
     end)
   end)
 end)
+
+------------------------------------------------------------
+-- TESTS: FULL REAL PIPELINE (no direct delivery cheats)
+------------------------------------------------------------
+
+describe("real e2e: full bot-delivered pipeline", function()
+  before_each(setup)
+  after_each(teardown)
+
+  it("crafts iron-gear-wheels via real logistic bots (full pipeline)", function()
+    -- Full pipeline: passive-provider (raw ore) -> workshop (crafts via
+    -- logistic bot delivery) -> active-provider (output) -> robots carry
+    -- to requester chest. No direct item insertion.
+    local world = H.setup_world{recipes = {
+      "iron-plate", "iron-gear-wheel"
+    }}
+
+    -- Raw materials in passive provider chests (bots pick from here)
+    H.place_supply_chest(20, 20, {{name = "iron-ore", count = 500}})
+
+    -- External requester chest demanding 5 gear wheels
+    H.place_requester(30, 15, "iron-gear-wheel", 5)
+
+    -- Workshop
+    local workshop = H.place_workshop(10, 10)
+    local ws_data = H.get_workshop_data(workshop.unit_number)
+
+    async(20000)  -- ~3 minutes at game_speed=100
+    on_tick(function()
+      if game.tick % 5 == 0 then
+        H.force_brain_reschedule(world.network)
+        Brain.assess_all_workshops()
+      end
+
+      -- Check how many gear wheels have been delivered to the external requester
+      local surface = H.get_surface()
+      local force = H.get_force()
+      local requesters = surface.find_entities_filtered{
+        name = "requester-chest",
+        force = force
+      }
+      local gear_count = 0
+      for _, chest in ipairs(requesters) do
+        if chest.valid then
+          local inv = chest.get_inventory(defines.inventory.chest)
+          if inv and inv.valid then
+            gear_count = gear_count + inv.get_item_count("iron-gear-wheel")
+          end
+        end
+      end
+
+      if gear_count >= 5 then
+        done()
+        return
+      end
+    end)
+  end)
+end)
