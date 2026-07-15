@@ -1,27 +1,10 @@
 local helpers = require("spec.helpers")
 
 helpers.install_globals()
+helpers.install_workshop_stubs()
 
--- Stub dependencies before loading workshop module.
-local Status = {
-  set_idle_status = function() end,
-  set_blocked_status = function() end,
-  set_no_network_status = function() end,
-  set_no_shortage_status = function() end,
-  set_working_status = function() end,
-  set_finishing_status = function() end,
-  set_goal_sprite = function() end,
-  destroy_goal_sprite = function() end
-}
-
-local Companions = {
-  set_requester_requests = function() return true end,
-  clear_requester_requests = function() end,
-  freeze_requester_batch = function() end
-}
-
-package.loaded["scripts.status"] = Status
-package.loaded["scripts.companions"] = Companions
+-- Retain a local handle so tests can override individual stub methods.
+local Companions = package.loaded["scripts.companions"]
 
 local Workshop = require("scripts.workshop")
 

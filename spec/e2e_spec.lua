@@ -727,16 +727,7 @@ describe("e2e Logistic Nexus", function()
 
   describe("multi-step internal crafting", function()
     it("crafts intermediates internally and only requests leaves from the network", function()
-      local recipes = {
-        ["iron-gear-wheel"] = make_recipe({
-          name = "iron-gear-wheel",
-          ingredients = {{type = "item", name = "iron-plate", amount = 2}}
-        }),
-        ["iron-plate"] = make_recipe({
-          name = "iron-plate",
-          ingredients = {{type = "item", name = "iron-ore", amount = 1}}
-        })
-      }
+      local recipes = helpers.make_iron_gear_recipes(make_recipe)
       local world = setup_game({recipes = recipes, supply = {}})
       add_network_supply(world.network, {{name = "iron-ore", quality = "normal", count = 100}})
 
@@ -1230,16 +1221,7 @@ describe("e2e Logistic Nexus", function()
     end)
 
     it("completes 5 consecutive cycles of a multi-step recipe", function()
-      local recipes = {
-        ["iron-gear-wheel"] = make_recipe({
-          name = "iron-gear-wheel",
-          ingredients = {{type = "item", name = "iron-plate", amount = 2}}
-        }),
-        ["iron-plate"] = make_recipe({
-          name = "iron-plate",
-          ingredients = {{type = "item", name = "iron-ore", amount = 1}}
-        })
-      }
+      local recipes = helpers.make_iron_gear_recipes(make_recipe)
       local world = setup_game({recipes = recipes, supply = {}})
       add_network_supply(world.network, {{name = "iron-ore", quality = "normal", count = 10000}})
 
@@ -1293,16 +1275,7 @@ describe("e2e Logistic Nexus", function()
     it("crafts a 3-batch multi-step recipe and delivers all products", function()
       _G.settings.global["logistic-nexus-max-batches-per-job"].value = 5
 
-      local recipes = {
-        ["iron-gear-wheel"] = make_recipe({
-          name = "iron-gear-wheel",
-          ingredients = {{type = "item", name = "iron-plate", amount = 2}}
-        }),
-        ["iron-plate"] = make_recipe({
-          name = "iron-plate",
-          ingredients = {{type = "item", name = "iron-ore", amount = 1}}
-        })
-      }
+      local recipes = helpers.make_iron_gear_recipes(make_recipe)
       local world = setup_game({recipes = recipes, supply = {}})
       -- 3 gears * 2 plates * 1 ore = 6 ore needed.
       add_network_supply(world.network, {{name = "iron-ore", quality = "normal", count = 6}})
@@ -1367,16 +1340,7 @@ describe("e2e Logistic Nexus", function()
     it("survives a second batch job after the first completes", function()
       _G.settings.global["logistic-nexus-max-batches-per-job"].value = 5
 
-      local recipes = {
-        ["iron-gear-wheel"] = make_recipe({
-          name = "iron-gear-wheel",
-          ingredients = {{type = "item", name = "iron-plate", amount = 2}}
-        }),
-        ["iron-plate"] = make_recipe({
-          name = "iron-plate",
-          ingredients = {{type = "item", name = "iron-ore", amount = 1}}
-        })
-      }
+      local recipes = helpers.make_iron_gear_recipes(make_recipe)
       local world = setup_game({recipes = recipes, supply = {}})
 
       local external_point, external_entity = make_requester_entity({
@@ -2027,16 +1991,7 @@ describe("e2e Logistic Nexus", function()
       -- Supply is exactly 4 ore.  Workshop 1 starts first and is mid-craft
       -- when workshop 2 is assigned.  The refresh of workshop 1's plan should
       -- NOT see supply that workshop 2's assignment already claimed.
-      local recipes = {
-        ["iron-gear-wheel"] = make_recipe({
-          name = "iron-gear-wheel",
-          ingredients = {{type = "item", name = "iron-plate", amount = 2}}
-        }),
-        ["iron-plate"] = make_recipe({
-          name = "iron-plate",
-          ingredients = {{type = "item", name = "iron-ore", amount = 1}}
-        })
-      }
+      local recipes = helpers.make_iron_gear_recipes(make_recipe)
       local world = setup_game({recipes = recipes, supply = {}})
       -- 4 ore: enough for 2 workshops × 1 gear each (2 ore per gear).
       add_network_supply(world.network, {{name = "iron-ore", quality = "normal", count = 12}})
@@ -2294,16 +2249,7 @@ describe("e2e Logistic Nexus", function()
     end)
 
     it("multi-step recipe: 3 cycles with full autonomous lifecycle", function()
-      local recipes = {
-        ["iron-gear-wheel"] = make_recipe({
-          name = "iron-gear-wheel",
-          ingredients = {{type = "item", name = "iron-plate", amount = 2}}
-        }),
-        ["iron-plate"] = make_recipe({
-          name = "iron-plate",
-          ingredients = {{type = "item", name = "iron-ore", amount = 1}}
-        })
-      }
+      local recipes = helpers.make_iron_gear_recipes(make_recipe)
       local world = make_realistic_world({
         recipes = recipes,
         supply = {{name = "iron-ore", quality = "normal", count = 10000}}

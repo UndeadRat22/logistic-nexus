@@ -1,33 +1,15 @@
 local helpers = require("spec.helpers")
 
 helpers.install_globals()
+helpers.install_workshop_stubs()
 
--- Stub dependencies before loading workshop module.
-local Status = {
-  set_idle_status = function() end,
-  set_blocked_status = function() end,
-  set_no_network_status = function() end,
-  set_no_shortage_status = function() end,
-  set_working_status = function() end,
-  set_finishing_status = function() end,
-  set_goal_sprite = function() end,
-  destroy_goal_sprite = function() end
-}
-package.loaded["scripts.status"] = Status
-
+-- Additional stubs specific to circuit-controls tests.
 local Network = {
   get_requester_point = function() return nil end,
   get_item_count_from_inventory = function() return 0 end,
   targeted_delivery_count = function() return 0 end
 }
 package.loaded["scripts.network"] = Network
-
-local Companions = {
-  set_requester_requests = function() return true end,
-  clear_requester_requests = function() end,
-  freeze_requester_batch = function() end
-}
-package.loaded["scripts.companions"] = Companions
 
 local Construction = {
   reserve_construction_output = function() end

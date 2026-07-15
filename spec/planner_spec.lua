@@ -120,16 +120,7 @@ describe("planner", function()
     end)
 
     it("logs internal crafting when network supply is insufficient", function()
-      local recipes = {
-        ["iron-gear-wheel"] = make_recipe({
-          name = "iron-gear-wheel",
-          ingredients = {{type = "item", name = "iron-plate", amount = 2}}
-        }),
-        ["iron-plate"] = make_recipe({
-          name = "iron-plate",
-          ingredients = {{type = "item", name = "iron-ore", amount = 1}}
-        })
-      }
+      local recipes = helpers.make_iron_gear_recipes(make_recipe)
       network_available = {["iron-plate"] = 1, ["iron-ore"] = 5}
       local trace = {}
 

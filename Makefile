@@ -18,7 +18,7 @@ lint:
 	PATH="/Users/rat/.luarocks/bin:/opt/homebrew/opt/lua@5.4/bin:$${PATH}" $(LUACHECK) .
 
 test:
-	$(BUSTED) spec
+	$(BUSTED) spec --exclude-pattern="real"
 
 test-real:
 	ifeq ($(FACTORIO_PATH),)

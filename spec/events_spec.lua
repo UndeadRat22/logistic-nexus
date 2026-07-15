@@ -36,10 +36,7 @@ end)
 
 describe("on_configuration_changed", function()
   it("clears stale upgrade_marked entries", function()
-    storage.upgrade_marked = {
-      [1] = {valid = true, unit_number = 1, surface = {index = 1}, position = {x = 0, y = 0}},
-      [2] = {valid = false, unit_number = 2, surface = {index = 1}, position = {x = 0, y = 0}}
-    }
+    storage.upgrade_marked = helpers.make_upgrade_marked_entries()
 
     Events.on_configuration_changed()
 

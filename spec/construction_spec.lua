@@ -424,10 +424,7 @@ describe("construction", function()
     end)
 
     it("cleanup_upgrade_marked removes invalid entries", function()
-      storage.upgrade_marked = {
-        [1] = {valid = true, unit_number = 1, surface = {index = 1}, position = {x = 0, y = 0}},
-        [2] = {valid = false, unit_number = 2, surface = {index = 1}, position = {x = 0, y = 0}}
-      }
+      storage.upgrade_marked = helpers.make_upgrade_marked_entries()
       Construction.cleanup_upgrade_marked()
       assert.is_not_nil(storage.upgrade_marked[1])
       assert.is_nil(storage.upgrade_marked[2])
