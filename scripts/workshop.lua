@@ -562,6 +562,8 @@ function M.start_job_now(workshop_data, job)
     construction_requested = job.construction_requested or 0,
     preflight_replanned = false,
     last_progress_tick = game.tick,
+    last_crafting_progress = 0,
+    crafting_stall_tick = game.tick,
     last_present_count = 0,
     last_incoming_count = 0,
     baseline_products_finished = workshop.products_finished or 0,
@@ -979,6 +981,22 @@ function tick_crafting_step(workshop_data, assignment, brain)
       Status.set_blocked_status(workshop)
     end
     return "working"
+  end
+
+  -- Stall detection: if products_finished hasn't increased for a
+  -- while, the workshop is stuck. Abandon the assignment entirely so
+  -- the brain can reassign to a different item.
+  local CRAFTING_STALL_TICKS = 1200
+  local current_finished = workshop.products_finished or 0
+  assignment.last_products_check = assignment.last_products_check or current_finished
+  assignment.product_stall_tick = assignment.product_stall_tick or game.tick
+
+  if current_finished > assignment.last_products_check then
+    assignment.last_products_check = current_finished
+    assignment.product_stall_tick = game.tick
+  elseif game.tick - assignment.product_stall_tick >= CRAFTING_STALL_TICKS then
+    M.abandon_waiting_assignment(workshop_data, assignment, {reason = "crafting-stall"})
+    return "idle"
   end
 
   Status.set_working_status(workshop, assignment.item, assignment.current_step_index or 1)

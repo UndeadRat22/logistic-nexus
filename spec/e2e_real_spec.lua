@@ -548,6 +548,222 @@ describe("real e2e: multi-batch with multi-step recipe", function()
 end)
 
 ------------------------------------------------------------
+-- TESTS: EXTENDED STRESS (matches real playthrough scenario)
+------------------------------------------------------------
+
+describe("real e2e: extended stress with fluctuating supply", function()
+  before_each(setup)
+  after_each(teardown)
+
+  it("survives 2 consecutive batch jobs on a single workshop", function()
+    _G.settings.global["logistic-nexus-max-batches-per-job"].value = 5
+
+    local world = H.setup_world{recipes = {"iron-plate", "iron-gear-wheel"}}
+
+    H.place_supply_chest(20, 20, {{name = "iron-ore", count = 50}})
+    H.place_requester(30, 20, "iron-gear-wheel", 2)
+    local workshop = H.place_workshop(10, 10)
+    local ws_data = H.get_workshop_data(workshop.unit_number)
+
+    local batch = 0
+    local phase = "assign"  -- assign -> deliver -> craft -> done
+
+    async(7200)
+    on_tick(function()
+      if game.tick % 5 == 0 then
+        H.force_brain_reschedule(world.network)
+        Brain.assess_all_workshops()
+      end
+
+      if phase == "assign" then
+        if H.workshop_state(ws_data) ~= "idle" then
+          phase = "deliver"
+        end
+      elseif phase == "deliver" then
+        -- Deliver requested ingredients
+        local requests = H.workshop_requests(ws_data)
+        for _, req in ipairs(requests) do
+          H.deliver_to_chest(ws_data.companions.requester, {
+            {name = req.name, quality = req.quality, count = req.amount}
+          })
+        end
+        phase = "craft"
+      elseif phase == "craft" then
+        if H.provider_has_item(ws_data.companions.provider, "iron-gear-wheel") >= 2 then
+          batch = batch + 1
+          if batch >= 2 then
+            done()
+            return
+          end
+          -- Clear products and start next batch
+          local inv = ws_data.companions.provider.get_inventory(defines.inventory.chest)
+          inv.remove({name = "iron-gear-wheel", count = 100, quality = "normal"})
+          inv.remove({name = "iron-plate", count = 100, quality = "normal"})
+          -- Re-supply
+          H.place_supply_chest(22 + batch * 2, 20, {{name = "iron-ore", count = 10}})
+          phase = "assign"
+        end
+      end
+    end)
+  end)
+
+  it("4 item types with fluctuating supply do not permanently stall", function()
+    -- KNOWN ISSUE: When supply fluctuates to 0 and returns, workshops can
+    -- get stuck cycling between crafting intermediate steps without
+    -- completing the final product. The stall detection in tick_crafting_step
+    -- helps (ws3 abandons correctly) but workshops producing intermediates
+    -- reset the products_finished timer. This is a deeper planner issue.
+    -- Tracked as a known limitation with the real-API test exposing it.
+    local world = H.setup_world{recipes = {
+      "iron-plate", "iron-gear-wheel", "copper-plate",
+      "transport-belt", "burner-inserter", "stone-furnace", "electric-mining-drill"
+    }}
+
+    -- 3 workshops
+    local workshops = {}
+    for i = 1, 3 do
+      local ws = H.place_workshop(10 + i * 6, 10)
+      table.insert(workshops, ws)
+    end
+
+    -- 4 requester chests wanting different products
+    H.place_requester(30, 20, "transport-belt", 10)
+    H.place_requester(30, 22, "burner-inserter", 10)
+    H.place_requester(30, 24, "stone-furnace", 10)
+    H.place_requester(30, 26, "electric-mining-drill", 5)
+
+    -- Track total production across all workshops
+    local total_produced = {}
+    local function count_production()
+      local items = {"transport-belt", "burner-inserter", "stone-furnace", "electric-mining-drill"}
+      for _, item in ipairs(items) do
+        for _, ws in ipairs(workshops) do
+          local ws_data = H.get_workshop_data(ws.unit_number)
+          if ws_data then
+            local count = H.provider_has_item(ws_data.companions.provider, item)
+            if count > 0 then
+              total_produced[item] = (total_produced[item] or 0) + count
+              -- Clear it so we can detect new production
+              local inv = ws_data.companions.provider.get_inventory(defines.inventory.chest)
+              inv.remove({name = item, count = count, quality = "normal"})
+            end
+          end
+        end
+      end
+    end
+
+    -- Simulate fluctuating supply: add ore, let it run, then remove it,
+    -- then add it again. Repeat for 3 supply cycles.
+    local supply_cycle = 0
+    local next_supply_tick = 0
+    local supply_on = false
+
+    async(7200)  -- 2 minutes at game_speed=100
+    on_tick(function()
+      -- Toggle supply every 1200 ticks
+      if game.tick >= next_supply_tick then
+        supply_cycle = supply_cycle + 1
+        if supply_cycle > 3 then
+          -- Check we produced at least something for each item
+          local all_produced = true
+          for _, item in ipairs({"transport-belt", "burner-inserter", "stone-furnace", "electric-mining-drill"}) do
+            if (total_produced[item] or 0) == 0 then
+              all_produced = false
+            end
+          end
+          if all_produced then
+            done()
+            return
+          end
+          -- If we've gone through 3 supply cycles and still nothing,
+          -- fail with diagnostic
+          if supply_cycle > 4 then
+            -- Diagnose workshop states deeply
+            local states = {}
+            for i, ws in ipairs(workshops) do
+              local ws_data = H.get_workshop_data(ws.unit_number)
+              local state = ws_data and ws_data.assignment and ws_data.assignment.state or "idle"
+              local target = ws_data and ws_data.assignment and ws_data.assignment.item or "none"
+              local blocked = ws_data and ws_data.last_blocked_reason or "none"
+              local entity = ws_data and ws_data.entity
+              local recipe_name = "nil"
+              local progress = 0
+              local energy = 0
+              local input_count = 0
+              if entity and entity.valid then
+                local r = entity.get_recipe()
+                recipe_name = r and r.name or "nil"
+                progress = entity.crafting_progress or 0
+                energy = entity.energy or 0
+                local inv = entity.get_inventory(defines.inventory.crafter_input)
+                if inv and inv.valid then input_count = #inv.get_contents() end
+              end
+              states[i] = string.format("ws%d:%s/%s/blocked=%s/recipe=%s/progress=%.1f/energy=%.0f/inputs=%d",
+                i, state, target, blocked, recipe_name, progress, energy, input_count)
+            end
+            error("Stall detected: after 4 supply cycles, production was: "
+              .. (total_produced["transport-belt"] or 0) .. " belts, "
+              .. (total_produced["burner-inserter"] or 0) .. " inserters, "
+              .. (total_produced["stone-furnace"] or 0) .. " furnaces, "
+              .. (total_produced["electric-mining-drill"] or 0) .. " drills"
+              .. " | " .. table.concat(states, " | "))
+          end
+        end
+
+        supply_on = not supply_on
+        if supply_on then
+          -- Add supply: raw materials in a passive provider chest
+          H.place_supply_chest(20 + supply_cycle * 2, 20, {
+            {name = "iron-ore", count = 100},
+            {name = "copper-ore", count = 50},
+            {name = "stone", count = 50}
+          })
+        else
+          -- Remove supply: destroy all passive provider chests
+          local surface = H.get_surface()
+          for _, entity in pairs(surface.find_entities_filtered{name = "passive-provider-chest"}) do
+            if entity.valid then entity.destroy() end
+          end
+        end
+        next_supply_tick = game.tick + 1200
+      end
+
+      -- Run brain assessment
+      if game.tick % 5 == 0 then
+        H.force_brain_reschedule(world.network)
+        Brain.assess_all_workshops()
+      end
+
+      -- Deliver ingredients to waiting workshops (simulating bot delivery)
+      if game.tick % 10 == 0 then
+        for _, ws in ipairs(workshops) do
+          local ws_data = H.get_workshop_data(ws.unit_number)
+          if ws_data and H.workshop_state(ws_data) == "waiting_inputs" then
+            local requests = H.workshop_requests(ws_data)
+            for _, req in ipairs(requests) do
+              local present = H.requester_has_item(
+                ws_data.companions.requester, req.name, req.quality
+              )
+              local needed = math.max(0, (req.amount or 0) - present)
+              if needed > 0 then
+                H.deliver_to_chest(ws_data.companions.requester, {
+                  {name = req.name, quality = req.quality, count = needed}
+                })
+              end
+            end
+          end
+        end
+      end
+
+      -- Count production
+      if game.tick % 50 == 0 then
+        count_production()
+      end
+    end)
+  end)
+end)
+
+------------------------------------------------------------
 -- TESTS: PARALLEL WORKSHOPS
 ------------------------------------------------------------
 
