@@ -59,3 +59,6 @@ factorio-test-data-dir/
 # Desloppify workspace
 .desloppify/
 
+# Git worktrees
+.worktrees/
+
