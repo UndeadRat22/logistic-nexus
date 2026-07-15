@@ -12,6 +12,8 @@ local Workshop = require("scripts.workshop")
 local Status = require("scripts.status")
 local Alerts = require("scripts.alerts")
 
+local WorkerMetrics = require("scripts.worker_metrics")
+
 local M = {}
 
 ------------------------------------------------------------
@@ -214,41 +216,6 @@ function M.choose_independent_job(brain, workshop_data, network, candidates, sup
 end
 
 ------------------------------------------------------------
--- WORKER METRICS
-------------------------------------------------------------
-
-function M.collect_worker_metrics(brain)
-  local workers = {}
-
-  for _, unit_number in ipairs(brain.workshops or {}) do
-    local workshop_data = storage.workshops[unit_number]
-    local assignment = workshop_data and workshop_data.assignment
-    local metric = {
-      unit_number = unit_number,
-      state = assignment and assignment.state or "idle",
-      target = assignment and assignment.item or nil,
-      quality = assignment and assignment.quality or "normal",
-      replans = assignment and assignment.replans or 0
-    }
-
-    if assignment and assignment.state == "waiting_inputs" then
-      local requester = workshop_data.companions and workshop_data.companions.requester
-      local present, incoming, uncovered = Workshop.assignment_delivery_progress(
-        requester,
-        assignment.requests
-      )
-      metric.present = present
-      metric.incoming = incoming
-      metric.missing = uncovered[1] and uncovered[1].name or nil
-    end
-
-    table.insert(workers, metric)
-  end
-
-  return workers
-end
-
-------------------------------------------------------------
 -- BRAIN PROCESSING
 ------------------------------------------------------------
 
@@ -417,7 +384,7 @@ function M.process_brain(brain)
     candidate_count = #candidates,
     product_limit = representative_controls.product_limit or C.DEFAULT_PRODUCT_LIMIT,
     targets = target_metrics,
-    workers = M.collect_worker_metrics(brain)
+    workers = WorkerMetrics.collect(brain)
   }
 end
 
@@ -508,5 +475,8 @@ function M.process_due_brains()
     end
   end
 end
+
+-- Re-export worker metrics for backward compatibility.
+M.collect_worker_metrics = WorkerMetrics.collect
 
 return M
