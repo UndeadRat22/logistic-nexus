@@ -1,3 +1,15 @@
+Version: 1.2.0
+Date: 2026-07-15
+  Bugfixes:
+    - Fixed permanent crafting stall when supply fluctuates: workshops no longer get stuck in crafting_step forever when ingredients run out mid-craft.
+    - Fixed workshop mk2 recipe crash on base-only Factorio 2.0: stack-inserter is a Space Age item, now falls back to bulk-inserter when Space Age is not installed.
+  Changes:
+    - Added crafting stall detection: if a workshop's crafting step index hasn't advanced for 2400 ticks, the assignment is abandoned so the brain can reassign to a different item.
+    - Added blocked-item TTL: when a workshop stalls on an item, the brain skips that item for 3600 ticks before retrying, preventing repeated reassignment to the same stalling recipe.
+    - Added optional Space Age dependency in info.json.
+  Features:
+    - Added real-API integration test suite (FactorioTest) running 20 tests inside a real Factorio instance.
+
 Version: 1.1.0
 Date: 2026-07-14
   Bugfixes:

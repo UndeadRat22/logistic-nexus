@@ -707,8 +707,15 @@ function M.abandon_waiting_assignment(workshop_data, assignment, blocked)
     Companions.clear_requester_requests(requester)
   end
 
-  if assignment and assignment.internal_inventory then
-    M.output_internal_inventory(workshop_data, assignment)
+  -- Collect any items still in the workshop's output inventory before
+  -- abandoning. Without this, crafted items can be stranded in the
+  -- assembling machine's output slot when the assignment is abandoned
+  -- mid-craft (e.g. crafting-stall detection).
+  if assignment then
+    M.collect_workshop_output_to_internal(workshop_data, assignment)
+    if assignment.internal_inventory then
+      M.output_internal_inventory(workshop_data, assignment)
+    end
   end
 
   workshop_data.last_blocked_reason = blocked and blocked.reason or "missing-material"
