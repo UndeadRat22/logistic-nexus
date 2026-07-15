@@ -1,0 +1,7 @@
+{
+  "modPath": ".",
+  "test": {
+    "game_speed": 100,
+    "default_timeout": 7200
+  }
+}

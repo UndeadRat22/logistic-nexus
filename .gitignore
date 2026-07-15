@@ -48,3 +48,11 @@ luac.out
 # Packaged mod releases
 releases/
 
+# Node.js / factorio-test-cli
+node_modules/
+package.json
+package-lock.json
+
+# factorio-test CLI working directory
+factorio-test-data-dir/
+

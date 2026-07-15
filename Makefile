@@ -1,4 +1,7 @@
-.PHONY: lint test test-and-lint package
+.PHONY: lint test test-and-lint test-real package
+
+# Path to the Factorio binary (auto-detected by the CLI if left empty)
+FACTORIO_PATH ?=
 
 # Tool paths default to common locations; override with env vars or make args.
 LUACHECK ?= /Users/rat/.luarocks/bin/luacheck
@@ -16,6 +19,13 @@ lint:
 
 test:
 	$(BUSTED) spec
+
+test-real:
+	ifeq ($(FACTORIO_PATH),)
+		npx factorio-test run -p .
+	else
+		npx factorio-test run -p . --factorio-path $(FACTORIO_PATH)
+	endif
 
 test-and-lint: test lint
 

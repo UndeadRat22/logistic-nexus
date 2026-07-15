@@ -1,3 +1,8 @@
+-- stack-inserter is a Space Age item; fall back to bulk-inserter (base 2.0).
+local stack_inserter_name =
+  (data.raw.item["stack-inserter"] and "stack-inserter")
+  or "bulk-inserter"
+
 data:extend({
   {
     type = "recipe",
@@ -27,7 +32,7 @@ data:extend({
     ingredients = {
       {type = "item", name = "logistic-nexus-workshop", amount = 1},
       {type = "item", name = "assembling-machine-3", amount = 2},
-      {type = "item", name = "stack-inserter", amount = 4},
+      {type = "item", name = stack_inserter_name, amount = 4},
       {type = "item", name = "advanced-circuit", amount = 20},
       {type = "item", name = "steel-plate", amount = 20},
       {type = "item", name = "processing-unit", amount = 5}
