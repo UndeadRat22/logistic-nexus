@@ -1,7 +1,10 @@
 local helpers = require("spec.helpers")
 
 helpers.install_globals()
+helpers.install_workshop_stubs()
+
 local Storage = require("scripts.storage")
+local Workshop = require("scripts.workshop")
 local Brain = require("scripts.brain")
 
 describe("brain", function()
@@ -327,6 +330,135 @@ describe("brain", function()
 
       Brain.process_brain = orig_process
       assert.is_nil(storage.brains["player|1"])
+    end)
+
+    it("ticks active workshops on non-due ticks", function()
+      local offset = Brain.brain_assess_tick_offset("player|1")
+      local non_due_tick = offset + 1
+      if non_due_tick >= 120 then non_due_tick = non_due_tick - 120 end
+
+      storage.brains = {
+        ["player|1"] = {
+          key = "player|1",
+          force_name = "player",
+          network_id = 1,
+          workshops = {1},
+          recipe_choices = {},
+          raw_supply_counts = {},
+          next_schedule_tick = 0,
+          network = {valid = true}
+        }
+      }
+      storage.workshops = {
+        [1] = {
+          entity = {valid = true},
+          assignment = {state = "crafting_step", item = "iron-gear-wheel"}
+        }
+      }
+
+      local ticked = {}
+      local orig_tick = Workshop.tick_workshop_worker
+      Workshop.tick_workshop_worker = function(ws_data, brain)
+        table.insert(ticked, ws_data)
+        return "working"
+      end
+
+      local process_called = false
+      local orig_process = Brain.process_brain
+      Brain.process_brain = function() process_called = true end
+
+      game.tick = non_due_tick
+      Brain.process_due_brains()
+
+      Workshop.tick_workshop_worker = orig_tick
+      Brain.process_brain = orig_process
+
+      assert.is_false(process_called)
+      assert.are.equal(1, #ticked)
+    end)
+
+    it("does not tick idle workshops on non-due ticks", function()
+      local offset = Brain.brain_assess_tick_offset("player|1")
+      local non_due_tick = offset + 1
+      if non_due_tick >= 120 then non_due_tick = non_due_tick - 120 end
+
+      storage.brains = {
+        ["player|1"] = {
+          key = "player|1",
+          force_name = "player",
+          network_id = 1,
+          workshops = {1},
+          recipe_choices = {},
+          raw_supply_counts = {},
+          next_schedule_tick = 0,
+          network = {valid = true}
+        }
+      }
+      storage.workshops = {
+        [1] = {
+          entity = {valid = true},
+          assignment = nil
+        }
+      }
+
+      local ticked = 0
+      local orig_tick = Workshop.tick_workshop_worker
+      Workshop.tick_workshop_worker = function() ticked = ticked + 1 return "idle" end
+
+      local orig_process = Brain.process_brain
+      Brain.process_brain = function() end
+
+      game.tick = non_due_tick
+      Brain.process_due_brains()
+
+      Workshop.tick_workshop_worker = orig_tick
+      Brain.process_brain = orig_process
+
+      assert.are.equal(0, ticked)
+    end)
+
+    it("ticks active workshops on every consecutive tick", function()
+      local offset = Brain.brain_assess_tick_offset("player|1")
+
+      storage.brains = {
+        ["player|1"] = {
+          key = "player|1",
+          force_name = "player",
+          network_id = 1,
+          workshops = {1},
+          recipe_choices = {},
+          raw_supply_counts = {},
+          next_schedule_tick = 0,
+          network = {valid = true}
+        }
+      }
+      storage.workshops = {
+        [1] = {
+          entity = {valid = true},
+          assignment = {state = "crafting_step", item = "iron-gear-wheel"}
+        }
+      }
+
+      local tick_count = 0
+      local orig_tick = Workshop.tick_workshop_worker
+      Workshop.tick_workshop_worker = function() tick_count = tick_count + 1 return "working" end
+
+      local orig_process = Brain.process_brain
+      Brain.process_brain = function() end
+
+      -- Run 10 consecutive ticks, skipping the one where the brain is due
+      -- (process_brain would also tick there, so we stub it out to isolate).
+      for t = 0, 9 do
+        local tick = offset + 10 + t  -- offset+10..offset+19, none == offset
+        game.tick = tick
+        Brain.process_due_brains()
+      end
+
+      Workshop.tick_workshop_worker = orig_tick
+      Brain.process_brain = orig_process
+
+      -- All 10 non-due ticks should have ticked the active workshop
+      assert.are.equal(10, tick_count)
     end)
   end)
 end)
