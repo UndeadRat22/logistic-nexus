@@ -949,25 +949,29 @@ describe("real e2e: full bot-delivered pipeline", function()
 
   it("completes multi-step recipe without false stall (regression)", function()
     -- Regression test for bug where stall detection accumulated time
-    -- across all crafting steps instead of per-step. With real crafting
-    -- time, a multi-step recipe would accumulate enough ticks to trigger
-    -- the false stall on the final product.
+    -- across all crafting steps instead of per-step (commit f250a40).
+    -- The bug caused the workshop to be abandoned mid-craft on the
+    -- final product of a multi-step recipe, stranding items in the
+    -- assembler's output inventory and internal_inventory.
     --
-    -- Uses a 5-batch gear-wheel recipe (5 plates + 5 gears = 10 steps)
-    -- with real crafting time. At ~120 ticks/step, total ~1200 ticks.
-    -- The old bug would trigger at 2400 cumulative ticks, so we also
-    -- request a second batch to push past that threshold.
+    -- This test crafts 5 iron-gear-wheels (10 steps: 5 plates + 5 gears)
+    -- with real crafting time, then asserts:
+    -- 1. All 5 gears reach the provider chest
+    -- 2. No crafting-stall abandonment occurred
+    -- 3. No items stranded in assembler output inventory
+    -- 4. No items stranded in internal_inventory
     _G.settings.global["logistic-nexus-max-batches-per-job"].value = 5
 
     local world = H.setup_world{recipes = {
       "iron-plate", "iron-gear-wheel"
     }}
 
-    -- Abundant supply so the workshop never runs out
     H.place_supply_chest(20, 20, {{name = "iron-ore", count = 500}})
     H.place_requester(30, 15, "iron-gear-wheel", 5)
     local workshop = H.place_workshop(10, 10)
     local ws_data = H.get_workshop_data(workshop.unit_number)
+
+    local stall_triggered = false
 
     async(18000)
     on_tick(function()
@@ -993,18 +997,42 @@ describe("real e2e: full bot-delivered pipeline", function()
         end
       end
 
-      -- Success: gears reached the provider
-      local gears = H.provider_has_item(ws_data.companions.provider, "iron-gear-wheel")
-      if gears >= 5 then
-        done()
-        return
+      -- Track if stall was triggered
+      if not ws_data.assignment and ws_data.last_blocked_reason == "crafting-stall" then
+        stall_triggered = true
       end
 
-      -- Fail if abandoned due to false stall
-      local assignment = ws_data.assignment
-      if not assignment and ws_data.last_blocked_reason == "crafting-stall" then
-        error("False stall: workshop was abandoned with crafting-stall during "
-          .. "multi-step recipe. step_stall_tick was not reset per step.")
+      -- Success: all 5 gears reached the provider
+      local gears = H.provider_has_item(ws_data.companions.provider, "iron-gear-wheel")
+      if gears >= 5 then
+        -- Final assertions: verify clean state
+        assert.is_false(stall_triggered,
+          "False stall: workshop was abandoned with crafting-stall during multi-step recipe")
+
+        -- No items stranded in assembler output inventory
+        local output_inv = workshop.get_output_inventory()
+        if output_inv and output_inv.valid then
+          local output_total = 0
+          for _, item in pairs(output_inv.get_contents() or {}) do
+            output_total = output_total + (item.count or 0)
+          end
+          assert.are.equal(0, output_total,
+            "Items stranded in assembler output inventory after crafting")
+        end
+
+        -- No items stranded in internal_inventory
+        local assignment = ws_data.assignment
+        if assignment and assignment.internal_inventory then
+          local internal_total = 0
+          for _, count in pairs(assignment.internal_inventory) do
+            internal_total = internal_total + count
+          end
+          assert.are.equal(0, internal_total,
+            "Items stranded in internal_inventory after crafting")
+        end
+
+        done()
+        return
       end
     end)
   end)

@@ -47,7 +47,7 @@ local function dbg(workshop_data, assignment, msg)
   local r = ws.get_recipe()
   if r then recipe_name = r.name end
 
-  log(string.format(
+  local msg_line = string.format(
     "[LN-DBG] tick=%d unit=%d state=%s item=%s recipe=%s step=%d/%d progress=%.3f finished=%d output=%d internal=%d [%s] | %s",
     game.tick,
     ws.unit_number or 0,
@@ -62,7 +62,9 @@ local function dbg(workshop_data, assignment, msg)
     internal_count,
     internal_items,
     msg or ""
-  ))
+  )
+  log(msg_line)
+  print(msg_line)
 end
 
 -- Export dbg so other functions can use it
