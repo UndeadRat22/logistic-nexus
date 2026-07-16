@@ -854,6 +854,9 @@ function M.start_next_internal_step(workshop_data, assignment)
   assignment.baseline_products_finished = workshop.products_finished or 0
   assignment.recorded_products_finished = workshop.products_finished or 0
   assignment.step_target_finished = (workshop.products_finished or 0) + (step.crafts or 1)
+  -- Reset stall tracking for the new step
+  assignment.last_step_check = next_index
+  assignment.step_stall_tick = game.tick
   workshop_data.current_recipe = step.recipe_name
   Status.set_working_status(workshop, assignment.item, next_index)
   return true
