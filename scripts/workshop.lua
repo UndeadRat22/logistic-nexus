@@ -256,38 +256,6 @@ function M.insert_internal_to_workshop(workshop_data, assignment, ingredients)
   return true
 end
 
-local function log_state(workshop_data, assignment, msg)
-  local ws = workshop_data.entity
-  if not (ws and ws.valid) then return end
-  local output_inv = ws.get_output_inventory()
-  local output_count = 0
-  if output_inv and output_inv.valid then
-    for _, item in pairs(output_inv.get_contents() or {}) do
-      output_count = output_count + (item.count or 0)
-    end
-  end
-  local internal_count = 0
-  if assignment and assignment.internal_inventory then
-    for _, count in pairs(assignment.internal_inventory) do
-      internal_count = internal_count + count
-    end
-  end
-  local recipe_name = "nil"
-  local r = ws.get_recipe()
-  if r then recipe_name = r.name end
-  log(string.format("[LN] tick=%d unit=%d state=%s item=%s recipe=%s step=%d/%d progress=%.2f output=%d internal=%d | %s",
-    game.tick, ws.unit_number or 0,
-    (assignment and assignment.state) or "nil",
-    (assignment and assignment.item) or "nil",
-    recipe_name,
-    (assignment and assignment.current_step_index) or 0,
-    (assignment and assignment.steps and #assignment.steps) or 0,
-    ws.crafting_progress or 0,
-    output_count,
-    internal_count,
-    msg or ""))
-end
-
 function M.collect_workshop_output_to_internal(workshop_data, assignment)
   local workshop = workshop_data and workshop_data.entity
   local inventory = workshop and workshop.valid and workshop.get_output_inventory()
@@ -334,10 +302,6 @@ function M.output_internal_inventory(workshop_data, assignment)
     end
   end
 
-  log(string.format("[LN] output_internal_inventory: %d item types to provider", #leftovers))
-  for _, item in ipairs(leftovers) do
-    log(string.format("[LN]   -> provider: %s x%d (%s)", item.name, item.count, item.quality or "normal"))
-  end
   M.insert_returned_items(workshop_data, leftovers)
   assignment.internal_inventory = {}
 end
@@ -738,7 +702,6 @@ function M.replan_waiting_assignment(
 end
 
 function M.abandon_waiting_assignment(workshop_data, assignment, blocked)
-  log_state(workshop_data, assignment, "ABANDON: " .. (blocked and blocked.reason or "unknown"))
   local requester = workshop_data.companions and workshop_data.companions.requester
   if requester and requester.valid then
     Companions.clear_requester_requests(requester)
@@ -823,7 +786,6 @@ function M.start_next_internal_step(workshop_data, assignment)
   local step = assignment.steps and assignment.steps[next_index]
 
   if not step then
-    log_state(workshop_data, assignment, "no more steps, outputting + draining")
     workshop_data.current_item = assignment.item
     workshop_data.current_quality = assignment.quality or "normal"
     workshop_data.current_is_construction = (assignment.construction_requested or 0) > 0
@@ -833,18 +795,14 @@ function M.start_next_internal_step(workshop_data, assignment)
     Status.destroy_goal_sprite(workshop_data)
     transition_state(assignment, "draining")
     Status.set_finishing_status(workshop, assignment.item)
-    log_state(workshop_data, assignment, "transitioned to draining")
     return true
   end
 
-  log_state(workshop_data, assignment, "starting step " .. next_index .. ": " .. (step.recipe_name or "?"))
   if not M.set_workshop_recipe(workshop_data, step.recipe, step.quality) then
-    log_state(workshop_data, assignment, "set_recipe FAILED for step " .. next_index)
     return false
   end
 
   if not M.insert_internal_to_workshop(workshop_data, assignment, step.ingredients) then
-    log_state(workshop_data, assignment, "insert_internal FAILED for step " .. next_index)
     return false
   end
 
@@ -868,7 +826,6 @@ function M.continue_assignment_after_internal_change(
     brain
   )
   if (assignment.current_step_index or 0) < #(assignment.steps or {}) then
-    log_state(workshop_data, assignment, "more steps remain, refreshing plan")
     local refreshed, blocked = M.refresh_assignment_plan_from_internal(
       workshop_data,
       assignment,
@@ -876,18 +833,15 @@ function M.continue_assignment_after_internal_change(
     )
 
     if refreshed == "waiting" then
-      log_state(workshop_data, assignment, "refresh returned waiting")
       return true
     end
 
     if not refreshed then
-      log_state(workshop_data, assignment, "refresh FAILED, abandoning")
       M.abandon_waiting_assignment(workshop_data, assignment, blocked)
       return false
     end
   end
 
-  log_state(workshop_data, assignment, "calling start_next_internal_step")
   return M.start_next_internal_step(workshop_data, assignment)
 end
 
@@ -1026,7 +980,6 @@ function tick_crafting_step(workshop_data, assignment, brain)
 
   if current_finished >= step_target then
     assignment.recorded_products_finished = current_finished
-    log_state(workshop_data, assignment, "step complete, collecting output")
 
     if M.collect_workshop_output_to_internal(workshop_data, assignment)
         and M.continue_assignment_after_internal_change(
@@ -1034,10 +987,8 @@ function tick_crafting_step(workshop_data, assignment, brain)
           assignment,
           brain
         ) then
-      log_state(workshop_data, assignment, "after continue_assignment")
       Status.set_working_status(workshop, assignment.item, assignment.current_step_index or 1)
     else
-      log_state(workshop_data, assignment, "continue_assignment FAILED")
       Status.set_blocked_status(workshop)
     end
     return "working"
@@ -1066,7 +1017,6 @@ end
 
 function tick_draining(workshop_data, assignment, brain)
   local workshop = workshop_data.entity
-  log_state(workshop_data, assignment, "draining tick")
 
   -- Move any items from the workshop's output inventory to the provider.
   -- Also flush internal_inventory — items may have been collected from
@@ -1079,13 +1029,11 @@ function tick_draining(workshop_data, assignment, brain)
       if count > 0 then has_internal = true; break end
     end
     if has_internal then
-      log_state(workshop_data, assignment, "draining: flushing internal to provider")
       M.output_internal_inventory(workshop_data, assignment)
     end
   end
 
   if M.workshop_is_clear_for_reassessment(workshop_data) then
-    log_state(workshop_data, assignment, "draining: clear, resetting")
     M.reset_workshop_assignment(workshop_data)
 
     local next_job = workshop_data.job_queue and workshop_data.job_queue[1]
