@@ -1016,10 +1016,16 @@ function tick_draining(workshop_data, assignment, brain)
   local workshop = workshop_data.entity
 
   -- Move any items from the workshop's output inventory to the provider.
-  -- Only collect when crafting is done (progress = 0 means no active craft).
+  -- Also flush internal_inventory — items may have been collected from
+  -- a prior crafting step but not yet output to the provider.
   if not (workshop.crafting_progress and workshop.crafting_progress > 0) then
-    if M.output_inventory_has_items(workshop) then
-      M.collect_workshop_output_to_internal(workshop_data, assignment)
+    M.collect_workshop_output_to_internal(workshop_data, assignment)
+    local internal = assignment.internal_inventory or {}
+    local has_internal = false
+    for _, count in pairs(internal) do
+      if count > 0 then has_internal = true; break end
+    end
+    if has_internal then
       M.output_internal_inventory(workshop_data, assignment)
     end
   end
