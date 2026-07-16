@@ -11,6 +11,63 @@ local Network = require("scripts.network")
 
 local M = {}
 
+-- Debug logging: controlled by the 'logistic-nexus-debug-logging' setting.
+-- When enabled, logs every state transition and item movement to factorio-current.log.
+local function debug_enabled_check()
+  return settings and settings.global
+    and settings.global["logistic-nexus-debug-logging"]
+    and settings.global["logistic-nexus-debug-logging"].value
+end
+
+local function dbg(workshop_data, assignment, msg)
+  if not debug_enabled_check() then return end
+  local ws = workshop_data and workshop_data.entity
+  if not (ws and ws.valid) then return end
+
+  local output_count = 0
+  local output_inv = ws.get_output_inventory()
+  if output_inv and output_inv.valid then
+    for _, item in pairs(output_inv.get_contents() or {}) do
+      output_count = output_count + (item.count or 0)
+    end
+  end
+
+  local internal_count = 0
+  local internal_items = ""
+  if assignment and assignment.internal_inventory then
+    for key, count in pairs(assignment.internal_inventory) do
+      if count > 0 then
+        internal_count = internal_count + count
+        internal_items = internal_items .. key .. "=" .. count .. " "
+      end
+    end
+  end
+
+  local recipe_name = "nil"
+  local r = ws.get_recipe()
+  if r then recipe_name = r.name end
+
+  log(string.format(
+    "[LN-DBG] tick=%d unit=%d state=%s item=%s recipe=%s step=%d/%d progress=%.3f finished=%d output=%d internal=%d [%s] | %s",
+    game.tick,
+    ws.unit_number or 0,
+    (assignment and assignment.state) or "nil",
+    (assignment and assignment.item) or "nil",
+    recipe_name,
+    (assignment and assignment.current_step_index) or 0,
+    (assignment and assignment.steps and #assignment.steps) or 0,
+    ws.crafting_progress or 0,
+    ws.products_finished or 0,
+    output_count,
+    internal_count,
+    internal_items,
+    msg or ""
+  ))
+end
+
+-- Export dbg so other functions can use it
+M.dbg = dbg
+
 ------------------------------------------------------------
 -- STATE MACHINE
 ------------------------------------------------------------
@@ -304,6 +361,7 @@ function M.output_internal_inventory(workshop_data, assignment)
 
   M.insert_returned_items(workshop_data, leftovers)
   assignment.internal_inventory = {}
+  dbg(workshop_data, assignment, "output_internal_inventory: pushed " .. #leftovers .. " item types to provider")
 end
 
 function M.requester_has_exact_ingredients(requester, ingredients)
@@ -702,6 +760,7 @@ function M.replan_waiting_assignment(
 end
 
 function M.abandon_waiting_assignment(workshop_data, assignment, blocked)
+  dbg(workshop_data, assignment, "ABANDON: " .. (blocked and blocked.reason or "unknown") .. " item=" .. (blocked and blocked.item or "?"))
   local requester = workshop_data.companions and workshop_data.companions.requester
   if requester and requester.valid then
     Companions.clear_requester_requests(requester)
@@ -786,6 +845,7 @@ function M.start_next_internal_step(workshop_data, assignment)
   local step = assignment.steps and assignment.steps[next_index]
 
   if not step then
+    dbg(workshop_data, assignment, "no more steps -> draining")
     workshop_data.current_item = assignment.item
     workshop_data.current_quality = assignment.quality or "normal"
     workshop_data.current_is_construction = (assignment.construction_requested or 0) > 0
@@ -798,7 +858,9 @@ function M.start_next_internal_step(workshop_data, assignment)
     return true
   end
 
+  dbg(workshop_data, assignment, "start step " .. next_index .. ": " .. (step.recipe_name or "?"))
   if not M.set_workshop_recipe(workshop_data, step.recipe, step.quality) then
+    dbg(workshop_data, assignment, "set_recipe FAILED")
     return false
   end
 
@@ -826,6 +888,7 @@ function M.continue_assignment_after_internal_change(
     brain
   )
   if (assignment.current_step_index or 0) < #(assignment.steps or {}) then
+    dbg(workshop_data, assignment, "more steps remain, refreshing plan")
     local refreshed, blocked = M.refresh_assignment_plan_from_internal(
       workshop_data,
       assignment,
@@ -833,15 +896,18 @@ function M.continue_assignment_after_internal_change(
     )
 
     if refreshed == "waiting" then
+      dbg(workshop_data, assignment, "refresh returned waiting")
       return true
     end
 
     if not refreshed then
+      dbg(workshop_data, assignment, "refresh FAILED, abandoning")
       M.abandon_waiting_assignment(workshop_data, assignment, blocked)
       return false
     end
   end
 
+  dbg(workshop_data, assignment, "calling start_next_internal_step")
   return M.start_next_internal_step(workshop_data, assignment)
 end
 
@@ -979,6 +1045,7 @@ function tick_crafting_step(workshop_data, assignment, brain)
   local step_target = assignment.step_target_finished or (recorded_finished + 1)
 
   if current_finished >= step_target then
+    dbg(workshop_data, assignment, "step complete: finished=" .. current_finished .. " target=" .. step_target)
     assignment.recorded_products_finished = current_finished
 
     if M.collect_workshop_output_to_internal(workshop_data, assignment)
@@ -1007,6 +1074,7 @@ function tick_crafting_step(workshop_data, assignment, brain)
     assignment.last_step_check = current_step
     assignment.step_stall_tick = game.tick
   elseif game.tick - assignment.step_stall_tick >= CRAFTING_STALL_TICKS then
+    dbg(workshop_data, assignment, "STALL DETECTED: step=" .. current_step .. " stall_ticks=" .. (game.tick - assignment.step_stall_tick))
     M.abandon_waiting_assignment(workshop_data, assignment, {reason = "crafting-stall", item = assignment.item})
     return "idle"
   end
@@ -1017,6 +1085,7 @@ end
 
 function tick_draining(workshop_data, assignment, brain)
   local workshop = workshop_data.entity
+  dbg(workshop_data, assignment, "draining tick")
 
   -- Move any items from the workshop's output inventory to the provider.
   -- Also flush internal_inventory — items may have been collected from

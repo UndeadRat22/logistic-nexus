@@ -23,5 +23,12 @@ data:extend({
     minimum_value = 1,
     maximum_value = 100,
     order = "c"
+  },
+  {
+    type = "bool-setting",
+    name = "logistic-nexus-debug-logging",
+    setting_type = "runtime-global",
+    default_value = false,
+    order = "d"
   }
 })

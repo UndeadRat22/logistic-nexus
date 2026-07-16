@@ -460,7 +460,10 @@ function M.process_due_brains()
   local slot = game.tick % C.ASSESS_INTERVAL
 
   for key, brain in pairs(storage.brains or {}) do
-    if M.brain_assess_tick_offset(key) == slot then
+    local is_due = M.brain_assess_tick_offset(key) == slot
+
+    if is_due then
+      -- Full pass: tick all workshops + schedule jobs for idle ones.
       if brain.network
           and brain.network.valid
           and brain.workshops
@@ -471,6 +474,30 @@ function M.process_due_brains()
         end
       else
         storage.brains[key] = nil
+      end
+    else
+      -- Tick active workshops every tick so crafting-step completion,
+      -- settle timers, and drain transitions are detected promptly
+      -- instead of waiting up to ASSESS_INTERVAL ticks for the next
+      -- scheduling slot.
+      if brain.network
+          and brain.network.valid
+          and brain.workshops then
+        for _, unit_number in pairs(brain.workshops) do
+          local workshop_data = storage.workshops[unit_number]
+          if workshop_data
+              and workshop_data.entity
+              and workshop_data.entity.valid
+              and workshop_data.assignment then
+            local ok, err = pcall(
+              Workshop.tick_workshop_worker, workshop_data, brain
+            )
+            if not ok then
+              log("Logistic Nexus tick_active error for unit "
+                .. tostring(unit_number) .. ": " .. tostring(err))
+            end
+          end
+        end
       end
     end
   end
