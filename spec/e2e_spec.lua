@@ -1115,6 +1115,224 @@ describe("e2e Logistic Nexus", function()
   end)
 
   ------------------------------------------------------------------
+  -- External satisfaction during crafting
+  --
+  -- What happens when the shortage is satisfied from elsewhere while
+  -- the workshop is mid-craft?  The brain only assigns to idle workshops
+  -- and never cancels an in-progress assignment, so the workshop should
+  -- finish the current batch and deliver output to the provider.
+  ------------------------------------------------------------------
+
+  describe("external satisfaction during crafting", function()
+    it("finishes the current batch when the shortage is satisfied from elsewhere mid-craft", function()
+      local recipes = {
+        ["iron-plate"] = make_recipe({
+          name = "iron-plate",
+          ingredients = {{type = "item", name = "iron-ore", amount = 1}}
+        })
+      }
+      local world = setup_game({recipes = recipes, supply = {}})
+      add_network_supply(world.network, {{name = "iron-ore", quality = "normal", count = 100}})
+
+      -- External requester wants 5 iron-plate.
+      local external_point, external_entity = make_requester_entity({
+        position = {x = 100, y = 100},
+        force = world.force,
+        surface = world.surface,
+        filters = {{name = "iron-plate", quality = "normal", count = 5}}
+      })
+      table.insert(world.network.requester_points, external_point)
+
+      local workshop = add_workshop(world, {
+        unit_number = 1,
+        position = {x = 0.5, y = 0.5},
+        recipes = recipes
+      })
+
+      Brain.assess_all_workshops()
+
+      assert.are.equal("iron-plate", workshop_target(workshop))
+      assert.are.equal("waiting_inputs", workshop_state(workshop))
+
+      -- Deliver the requested ore to the workshop's requester.
+      local requests = workshop_requests(workshop)
+      deliver_to_requester(workshop.companions.requester, {
+        {name = "iron-ore", quality = "normal", count = requests[1].amount}
+      })
+
+      -- Drive through settling into crafting.
+      force_brain_reschedule(world)
+      Brain.assess_all_workshops()
+      advance_ticks(C.REQUEST_SETTLE_TICKS + 1)
+      force_brain_reschedule(world)
+      Brain.assess_all_workshops()
+
+      assert.are.equal("crafting_step", workshop_state(workshop))
+
+      -- While crafting is in progress, the requested items arrive from
+      -- somewhere else (another logistics network, a player, a cargo pod).
+      -- The external requester now has all 5 iron-plates it asked for.
+      deliver_to_requester(external_entity, {
+        {name = "iron-plate", quality = "normal", count = 5}
+      })
+
+      -- Continue driving the workshop.  It should NOT cancel the in-progress
+      -- craft; it finishes the current batch and delivers output to the
+      -- provider.
+      for _ = 1, 30 do
+        if workshop_state(workshop) == "idle" then break end
+        if workshop_state(workshop) == "crafting_step" then
+          complete_crafting_step(workshop, 1)
+        end
+        force_brain_reschedule(world)
+        Brain.assess_all_workshops()
+        advance_ticks(C.REQUEST_SETTLE_TICKS + 1)
+        force_brain_reschedule(world)
+        Brain.assess_all_workshops()
+      end
+
+      -- The workshop finished crafting: iron-plate is in the provider.
+      assert.is_true(
+        provider_has_item(workshop.companions.provider, "iron-plate", "normal") >= 1,
+        "Workshop should have produced iron-plate despite external satisfaction"
+      )
+      -- The workshop returned to idle (not stuck in any active state).
+      assert.are.equal("idle", workshop_state(workshop))
+      -- The externally-delivered items are still in the external requester.
+      assert.are.equal(5, requester_has_item(external_entity, "iron-plate", "normal"))
+    end)
+
+    it("picks up a new request that appears mid-craft after the current batch finishes", function()
+      local recipes = helpers.make_iron_gear_recipes(make_recipe)
+      recipes["burner-inserter"] = make_recipe({
+        name = "burner-inserter",
+        ingredients = {
+          {type = "item", name = "iron-plate", amount = 1},
+          {type = "item", name = "iron-gear-wheel", amount = 1}
+        }
+      })
+      local world = setup_game({recipes = recipes, supply = {}})
+      add_network_supply(world.network, {{name = "iron-ore", quality = "normal", count = 1000}})
+
+      -- External requester wants 1 iron-plate.
+      local plate_point, plate_entity = make_requester_entity({
+        position = {x = 100, y = 100},
+        force = world.force,
+        surface = world.surface,
+        filters = {{name = "iron-plate", quality = "normal", count = 1}}
+      })
+      table.insert(world.network.requester_points, plate_point)
+
+      local workshop = add_workshop(world, {
+        unit_number = 1,
+        position = {x = 0.5, y = 0.5},
+        recipes = recipes
+      })
+
+      Brain.assess_all_workshops()
+      assert.are.equal("iron-plate", workshop_target(workshop))
+
+      -- Deliver ore and drive into crafting.
+      local requests = workshop_requests(workshop)
+      deliver_to_requester(workshop.companions.requester, {
+        {name = "iron-ore", quality = "normal", count = requests[1].amount}
+      })
+      force_brain_reschedule(world)
+      Brain.assess_all_workshops()
+      advance_ticks(C.REQUEST_SETTLE_TICKS + 1)
+      force_brain_reschedule(world)
+      Brain.assess_all_workshops()
+      assert.are.equal("crafting_step", workshop_state(workshop))
+
+      -- While crafting iron-plate, two things happen simultaneously:
+      --   1. The iron-plate shortage is satisfied from elsewhere (the
+      --      external requester gets its plates from another source).
+      --   2. A new requester appears wanting burner-inserters (a multi-
+      --      step recipe: ore -> plate -> gear -> burner-inserter).
+      deliver_to_requester(plate_entity, {
+        {name = "iron-plate", quality = "normal", count = 1}
+      })
+      local inserter_point = make_requester_entity({
+        position = {x = 100, y = 101},
+        force = world.force,
+        surface = world.surface,
+        filters = {{name = "burner-inserter", quality = "normal", count = 1}}
+      })
+      table.insert(world.network.requester_points, inserter_point)
+
+      -- The workshop should still finish the in-progress iron-plate batch
+      -- even though the shortage is already gone — it does not cancel.
+      for _ = 1, 20 do
+        if workshop_state(workshop) == "idle" then break end
+        if workshop_state(workshop) == "crafting_step" then
+          complete_crafting_step(workshop, 1)
+        end
+        force_brain_reschedule(world)
+        Brain.assess_all_workshops()
+        advance_ticks(C.REQUEST_SETTLE_TICKS + 1)
+        force_brain_reschedule(world)
+        Brain.assess_all_workshops()
+      end
+
+      -- Iron-plate was still produced despite the shortage being gone.
+      assert.is_true(
+        provider_has_item(workshop.companions.provider, "iron-plate", "normal") >= 1
+      )
+
+      -- The workshop returned to idle and should pick up the burner-inserter
+      -- job on the next assess — no shortage on iron-plate anymore, but the
+      -- burner-inserter shortage is live.
+      force_brain_reschedule(world)
+      Brain.assess_all_workshops()
+
+      for _ = 1, 5 do
+        if workshop_state(workshop) ~= "idle" then break end
+        force_brain_reschedule(world)
+        Brain.assess_all_workshops()
+        advance_ticks(1)
+      end
+
+      assert.are_not_equal("idle", workshop_state(workshop),
+        "Workshop should have picked up the burner-inserter job")
+      assert.are.equal("burner-inserter", workshop_target(workshop))
+
+      -- Drive the full multi-step craft to completion.
+      for _ = 1, 40 do
+        local st = workshop_state(workshop)
+        if st == "idle" then break end
+        if st == "waiting_inputs" then
+          local reqs = workshop_requests(workshop)
+          for _, req in ipairs(reqs) do
+            local current = requester_has_item(
+              workshop.companions.requester, req.name, req.quality
+            )
+            local needed = math.max(0, (req.amount or 0) - current)
+            if needed > 0 then
+              deliver_to_requester(workshop.companions.requester, {
+                {name = req.name, quality = req.quality, count = needed}
+              })
+            end
+          end
+        end
+        if st == "crafting_step" then
+          complete_crafting_step(workshop, 1)
+        end
+        force_brain_reschedule(world)
+        Brain.assess_all_workshops()
+        advance_ticks(C.REQUEST_SETTLE_TICKS + 1)
+        force_brain_reschedule(world)
+        Brain.assess_all_workshops()
+      end
+
+      -- The burner-inserter was produced and delivered to the provider.
+      assert.is_true(
+        provider_has_item(workshop.companions.provider, "burner-inserter", "normal") >= 1,
+        "Workshop should have produced burner-inserter after the iron-plate batch"
+      )
+    end)
+  end)
+
+  ------------------------------------------------------------------
   -- Complex multi-cycle stress tests
   ------------------------------------------------------------------
 
